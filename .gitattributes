@@ -1,0 +1,14 @@
+# Shell scripts must keep LF endings or they break in WSL:
+#   bash: $'\r': command not found
+*.sh    text eol=lf
+*.py    text eol=lf
+
+# Markdown and web assets are fine either way; normalise for clean diffs.
+*.md    text eol=lf
+*.html  text eol=lf
+*.css   text eol=lf
+*.js    text eol=lf
+
+# Captures are binary and gitignored, but be explicit.
+*.pcap   binary
+*.pcapng binary
