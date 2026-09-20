@@ -94,6 +94,29 @@ while IFS= read -r d; do
   done
 done < <(find labs -mindepth 2 -maxdepth 3 -name setup.sh -not -path 'labs/_template/*' -printf '%h\n' 2>/dev/null)
 
+section "Site shell"
+for f in site/index.html site/assets/site.css site/assets/site.js tools/serve.sh; do
+  [ -f "$f" ] && pass "$f" || fail "$f missing"
+done
+
+if [ -f site/index.html ]; then
+  grep -q 'assets/curriculum.js' site/index.html \
+    && pass "index.html loads curriculum.js" \
+    || fail "index.html does not load assets/curriculum.js"
+  # Strip comment lines first - the word "fetch()" appears in comments
+  # explaining why it is not used, and that must not trip the check.
+  if cat site/index.html site/assets/site.js \
+       | grep -vE '^\s*(//|\*|/\*)' \
+       | grep -qE '\bfetch\s*\('; then
+    fail "site uses fetch() - blocked under file://"
+  else
+    pass "site avoids fetch()"
+  fi
+  grep -qiE 'src="https?://|href="https?://[^"]*\.css' site/index.html \
+    && fail "site references a CDN - must work offline" \
+    || pass "site has no external resources"
+fi
+
 section "Summary"
 if [ "$FAIL" -eq 0 ]; then
   printf '\033[32mScaffold healthy.\033[0m\n'

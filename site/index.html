@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Networking Curriculum</title>
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <div class="brand">
+      <span class="brand-mark">//</span>
+      <span>Networking &amp; Linux</span>
+    </div>
+    <div class="topbar-tools">
+      <input id="search" type="search" placeholder="Filter modules…" autocomplete="off" spellcheck="false">
+      <button id="theme" type="button" title="Toggle theme">◐</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="summary">
+    <div class="summary-head">
+      <h1>Progress</h1>
+      <p id="overall-text" class="muted">—</p>
+    </div>
+    <div class="bar bar-lg"><div id="overall-bar" class="bar-fill"></div></div>
+    <p class="note">
+      Docs are the source of truth — read them in your editor under
+      <code>docs/</code>. These pages show mechanisms moving; they do not
+      repeat the prose.
+    </p>
+  </section>
+
+  <section id="phases" class="phases"></section>
+
+  <p id="empty" class="empty" hidden>No modules match that filter.</p>
+</main>
+
+<footer class="wrap foot">
+  <span>83 modules · ~247 hours · study order top to bottom</span>
+  <span class="muted">Progress is stored in this browser only.</span>
+</footer>
+
+<script src="assets/curriculum.js"></script>
+<script src="assets/site.js"></script>
+</body>
+</html>
