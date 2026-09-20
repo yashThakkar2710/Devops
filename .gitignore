@@ -1,0 +1,13 @@
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+
+# Lab artifacts — regenerate, never commit
+*.pcap
+*.pcapng
+labs/**/tmp/
+labs/**/out/
+
+# Local site state
+site/.cache/
