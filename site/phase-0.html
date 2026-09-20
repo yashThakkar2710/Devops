@@ -52,6 +52,46 @@
   .reason b { display: block; font-size: 14px; margin-bottom: 4px; }
   .reason p { margin: 0; font-size: 13.5px; color: var(--ink-dim); }
 
+  /* ---- doors (interfaces) ---- */
+  .doors { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 14px; margin: 18px 0 22px; }
+  .door { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 15px 16px; }
+  .dname { font-family: var(--mono); font-size: 15px; color: var(--s-iface); }
+  .dsub { margin: 2px 0 12px; font-size: 13px; color: var(--ink-faint); }
+  .door p:last-child { margin-bottom: 0; font-size: 13.5px; color: var(--ink-dim); }
+  pre.dart {
+    font-family: var(--mono); font-size: 12.5px; line-height: 1.6;
+    background: var(--panel-2); border: 1px solid var(--line-soft);
+    border-radius: 7px; padding: 12px 13px; margin: 0 0 12px;
+    overflow-x: auto; color: var(--ink-dim);
+  }
+  pre.dart.wide { margin: 14px 0; }
+  pre.dart.out { color: var(--ink); }
+  pre.dart .dim { color: var(--ink-faint); }
+  .hl-a { color: var(--s-dir); }
+  .hl-b { color: var(--s-to); }
+  .hl-c { color: var(--s-port); }
+
+  /* ---- address table ---- */
+  .iptable { margin: 16px 0 20px; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+  .iprow { display: grid; grid-template-columns: 17ch 13ch 1fr; gap: 14px; padding: 10px 14px; font-size: 13.5px; border-bottom: 1px solid var(--line-soft); align-items: baseline; }
+  .iptable.narrow .iprow { grid-template-columns: 10ch 1fr; }
+  .iprow:last-child { border-bottom: 0; }
+  .iprow.head { background: var(--panel-2); color: var(--ink-faint); font-size: 12px; }
+  .iprow code { color: var(--accent); }
+  .iprow span:not(:first-child) { color: var(--ink-dim); }
+
+  /* ---- crossing wires ---- */
+  .crossing { display: grid; grid-template-columns: 1fr 120px 1fr; gap: 6px; align-items: center; margin: 18px 0 20px; }
+  .clabel { margin: 0 0 8px; font-size: 12px; color: var(--ink-faint); }
+  .cbox { border: 1px solid var(--line); border-radius: 7px; padding: 9px 12px; margin-bottom: 10px; background: var(--panel); }
+  .cbox:last-child { margin-bottom: 0; }
+  .cbox b { font-family: var(--mono); font-size: 14px; display: block; }
+  .cbox span { font-size: 12.5px; color: var(--ink-dim); }
+  .cbox.a b { color: var(--s-dir); }
+  .cbox.b b { color: var(--s-to); }
+  .cwires { width: 120px; height: 120px; }
+  @media (max-width: 620px) { .crossing { grid-template-columns: 1fr; } .cwires { display: none; } }
+
   .crumb { padding: 20px 0 0; font-size: 13px; }
   .crumb a { color: var(--accent); text-decoration: none; }
   .crumb a:hover { text-decoration: underline; }
@@ -343,6 +383,136 @@
   </section>
 
   <section>
+    <h2>Your machine has two doors</h2>
+    <p class="sub">A network interface is a way out of your computer. Run
+    <code>ip -br addr show</code> to see yours.</p>
+
+    <div class="doors">
+      <div class="door">
+        <b class="dname">eth0</b>
+        <p class="dsub">the real door</p>
+        <pre class="dart">┌──────────┐
+│ your     │ eth0
+│ computer │ ════► router ► internet
+└──────────┘</pre>
+        <p><code>eth</code> is short for Ethernet, <code>0</code> means the
+        first one. Its address is <code>172.26.1.224</code>. Packets through
+        this door <strong>leave the machine</strong>.</p>
+      </div>
+
+      <div class="door">
+        <b class="dname">lo</b>
+        <p class="dsub">the door back into the same room</p>
+        <pre class="dart">┌──────────┐
+│ your  ┌──┴──┐
+│ comp. │ lo  │ out… and straight back
+│       └──┬──┘
+└──────────┘</pre>
+        <p><code>lo</code> is short for loopback. Its address is
+        <code>127.0.0.1</code>. Packets through this door
+        <strong>never leave</strong>. This is what
+        <code>localhost:3000</code> has always been.</p>
+      </div>
+    </div>
+
+    <p>Why have a fake door at all? Programs on one machine need to talk to
+    each other. Rather than invent a second system for that, they reuse the
+    network — through a door that leads back inside. Same addresses, same
+    ports, same rules, no cable.</p>
+
+    <h3 class="minor">Two ways to spot loopback in a capture</h3>
+    <pre class="dart wide">12:44:53.223421 <span class="hl-a">eth0</span> Out IP <span class="hl-b">172.26.1.224</span> &gt; <span class="hl-c">1.1.1.1</span>.53
+12:44:53.333082 <span class="hl-a">lo</span>   In  IP <span class="hl-b">10.255.255.254</span> &gt; <span class="hl-c">10.255.255.254</span>.53</pre>
+    <p>The interface name is the second item on every line. And on a
+    loopback line the two addresses are <strong>identical</strong> — the
+    machine is both sender and receiver.</p>
+  </section>
+
+  <section>
+    <h2>So what is "my IP address"?</h2>
+    <p class="sub">A machine does not have one address. It has one per door,
+    and a few extra. All of them are correct at the same time.</p>
+
+    <div class="iptable">
+      <div class="iprow head"><span>address</span><span>lives on</span><span>who can see it</span></div>
+      <div class="iprow"><code>127.0.0.1</code><span>lo</span><span>only programs on this machine</span></div>
+      <div class="iprow"><code>10.255.255.254</code><span>lo</span><span>only WSL's own DNS helper</span></div>
+      <div class="iprow"><code>172.26.1.224</code><span>eth0</span><span>your Windows machine and its network</span></div>
+      <div class="iprow"><code>172.26.0.1</code><span>the router</span><span>the way out of your neighbourhood</span></div>
+      <div class="iprow"><code>(your public one)</code><span>your ISP</span><span>the entire internet</span></div>
+    </div>
+
+    <p>Find the last one with <code>curl -s ifconfig.me</code>. It is not the
+    same as any address on your machine — your router owns it, and everything
+    in your house shares it. Why that works is Phase 2, under the name NAT.</p>
+
+    <h3 class="minor">The slash number</h3>
+    <p>An address is written <code>172.26.1.224/20</code>. The number after
+    the slash says <strong>how big your neighbourhood is</strong>.</p>
+
+    <div class="iptable narrow">
+      <div class="iprow head"><span>written</span><span>addresses in the neighbourhood</span></div>
+      <div class="iprow"><code>/32</code><span>1 — just this address, alone</span></div>
+      <div class="iprow"><code>/24</code><span>256</span></div>
+      <div class="iprow"><code>/20</code><span>4,096</span></div>
+      <div class="iprow"><code>/8</code><span>16,777,216</span></div>
+    </div>
+
+    <p>A bigger number means a <em>smaller</em> neighbourhood. That feels
+    backwards and it is explained properly in Phase 2. For now:
+    <code>10.255.255.254/32</code> is a neighbourhood of exactly one — that
+    DNS helper stands alone. <code>172.26.1.224/20</code> puts you among
+    4,096 addresses, and your Windows machine is one of your neighbours.</p>
+  </section>
+
+  <section>
+    <h2>Direct, or via the router?</h2>
+    <p class="sub">Before sending anything, your machine asks one question:
+    is this address in my neighbourhood? You can watch it decide, without
+    sending a single packet.</p>
+
+    <div class="cmds">
+      <div class="cmd"><code>ip route get 172.26.1.99</code><span class="what">a neighbour</span></div>
+    </div>
+    <pre class="dart wide out">172.26.1.99 dev eth0 src 172.26.1.224</pre>
+    <p>No <code>via</code>. Straight there.</p>
+
+    <div class="cmds" style="margin-top:20px">
+      <div class="cmd"><code>ip route get 8.8.8.8</code><span class="what">a stranger</span></div>
+    </div>
+    <pre class="dart wide out">8.8.8.8 <span class="hl-a">via 172.26.0.1</span> dev eth0 src 172.26.1.224</pre>
+    <p>There is a <code>via</code>. Hand it to the router and let them deal
+    with it.</p>
+
+    <div class="cmds" style="margin-top:20px">
+      <div class="cmd"><code>ip route get 127.0.0.1</code><span class="what">myself</span></div>
+    </div>
+    <pre class="dart wide out"><span class="hl-a">local</span> 127.0.0.1 dev lo src 127.0.0.1</pre>
+    <p>Never leaves the machine.</p>
+
+    <h3 class="minor">The entire rulebook is two lines</h3>
+    <div class="cmds">
+      <div class="cmd"><code>ip route show</code><span class="what">every rule your machine has</span></div>
+    </div>
+    <pre class="dart wide out">default       via 172.26.0.1 dev eth0
+172.26.0.0/20               dev eth0</pre>
+
+    <p>Read it as a single question:</p>
+    <pre class="dart wide">Is the address inside 172.26.0.0/20?
+   yes → send it straight out eth0
+   no  → "default" → give it to 172.26.0.1</pre>
+
+    <p><code>default</code> means <em>anything I do not recognise</em>. Every
+    address on the internet that is not your neighbour — billions of them —
+    falls into that one line.</p>
+
+    <p>This is the idea from the top of the page, now in front of you. Your
+    machine has no idea where <code>8.8.8.8</code> is. It only knows: not
+    mine, give it to the router. The router then asks itself the same
+    question, and so does the next one, all the way there.</p>
+  </section>
+
+  <section>
     <h2>The name lookup, both halves</h2>
     <p class="sub">Two packets. A question and its answer. Notice what swaps
     between them.</p>
@@ -369,12 +539,107 @@
     computer matches an answer to the question it asked, with no memory of the
     conversation required anywhere in between.</p>
 
-    <p>Your capture actually shows this happening <strong>twice</strong> —
-    once because the lab asked <code>1.1.1.1</code> directly, and again
-    because <code>curl</code> then made its own lookup through WSL. The second
-    one asked two questions at once: <code>A?</code> for an old-style address
-    and <code>AAAA?</code> for a new-style one. It received both, and used the
-    old-style one. Why it does that is a Phase 2 question.</p>
+    <p>Your capture shows this happening <strong>twice</strong>. Lines 1–2
+    are <code>dig</code>, a tool whose only job is asking name questions —
+    the lab runs it so a lookup is guaranteed to appear. Lines 3–6 are
+    <code>curl</code> doing its own. Neither program knew the other had
+    asked. <strong>Programs do not share name answers with each other.</strong></p>
+  </section>
+
+  <section>
+    <h2>Lines 3–6: two questions, and why they need numbers</h2>
+    <p class="sub">The second lookup is the most interesting thing in your
+    capture. Four packets, on loopback, and the answers come back in the
+    wrong order.</p>
+
+    <pre class="dart wide">3  .333082  lo  10.255.255.254.<span class="hl-c">42162</span> &gt; …53   <span class="hl-a">47200</span>+  A?    example.com.
+4  .333109  lo  10.255.255.254.<span class="hl-c">42162</span> &gt; …53   <span class="hl-b">38510</span>+  AAAA? example.com.
+5  .366140  lo  …53 &gt; 10.255.255.254.<span class="hl-c">42162</span>   <span class="hl-b">38510</span>   AAAA  2606:4700:9a65:…
+6  .370801  lo  …53 &gt; 10.255.255.254.<span class="hl-c">42162</span>   <span class="hl-a">47200</span>   A     104.20.23.154, 172.66.147.243</pre>
+
+    <h3 class="minor">Two kinds of address exist</h3>
+    <div class="iptable">
+      <div class="iprow head"><span>question</span><span>asking for</span><span>looks like</span></div>
+      <div class="iprow"><code>A?</code><span>an IPv4 address</span><span><code>104.20.23.154</code></span></div>
+      <div class="iprow"><code>AAAA?</code><span>an IPv6 address</span><span><code>2606:4700:9a65:72db:…</code></span></div>
+    </div>
+
+    <p><strong>IPv4</strong> uses four numbers, which allows about 4.3
+    billion addresses. In the 1980s that was unimaginably many. It ran out.
+    <strong>IPv6</strong> is the replacement, long enough to have no
+    practical limit. The world has been moving across for twenty-five years
+    and is not finished, so programs ask for both and use whichever
+    works.</p>
+
+    <p>Note the timestamps: <code>.333082</code> and <code>.333109</code>.
+    Twenty-seven <em>microseconds</em> apart. <code>curl</code> did not ask,
+    wait, then ask again — waiting would have doubled the delay.</p>
+
+    <h3 class="minor">The answers arrive in the wrong order</h3>
+
+    <div class="crossing">
+      <div class="cside">
+        <p class="clabel">asked</p>
+        <div class="cbox a"><b>47200</b><span>A?</span></div>
+        <div class="cbox b"><b>38510</b><span>AAAA?</span></div>
+      </div>
+      <svg class="cwires" viewBox="0 0 120 120" aria-hidden="true">
+        <path d="M0,28 C60,28 60,92 120,92" fill="none" stroke="var(--s-from)" stroke-width="2"/>
+        <path d="M0,92 C60,92 60,28 120,28" fill="none" stroke="var(--s-to)" stroke-width="2"/>
+      </svg>
+      <div class="cside">
+        <p class="clabel">answered</p>
+        <div class="cbox b"><b>38510</b><span>AAAA, first back</span></div>
+        <div class="cbox a"><b>47200</b><span>A, second back</span></div>
+      </div>
+    </div>
+
+    <p>The first question was answered second. Now look at why that is a
+    problem — the two questions were sent from the
+    <strong>same port</strong>:</p>
+
+    <pre class="dart wide">line 3:  10.255.255.254.<span class="hl-c">42162</span> &gt; 10.255.255.254.53
+line 4:  10.255.255.254.<span class="hl-c">42162</span> &gt; 10.255.255.254.53
+                        <span class="hl-c">↑ identical ↑</span></pre>
+
+    <p>Same sender, same port, same destination, same port. Two replies land
+    in the same place and look the same from the outside. The only thing
+    telling them apart is the number stamped on each one:
+    <code>47200</code> and <code>38510</code>. It is copied from the question
+    onto its answer, and it is called the <strong>transaction ID</strong>.</p>
+
+    <div class="verdict">
+      <p class="big">You watched the exact problem that ID exists to solve.</p>
+      <p>Most people learn "a name lookup has a transaction ID" as a fact to
+      memorise. You saw the out-of-order delivery that makes it necessary.
+      There is a second, security-related reason for that number being
+      random rather than sequential — Phase 4.</p>
+    </div>
+
+    <h3 class="minor">One name, two addresses</h3>
+    <pre class="dart wide">6   47200  <span class="hl-a">2</span>/0/0  A 104.20.23.154, A 172.66.147.243</pre>
+    <p>Two answers. <code>example.com</code> has two addresses, and either
+    works — if one server dies the other still answers. Your machine used
+    the first, which is why packet 7 goes to
+    <code>104.20.23.154</code>.</p>
+
+    <h3 class="minor">It got an IPv6 address and ignored it</h3>
+    <p>Line 5 handed over a perfectly good IPv6 address. Packet 7 used IPv4
+    anyway. The reason is on your own machine:</p>
+
+    <pre class="dart wide out">$ ip -6 route show default
+<span class="dim">(nothing)</span>
+
+$ curl -6 https://example.com   <span class="dim">→ failed</span>
+$ curl -4 https://example.com   <span class="dim">→ 200 OK</span></pre>
+
+    <p>There is no IPv6 route out of WSL. The <code>fe80::</code> address on
+    <code>eth0</code> is local-only and cannot leave the machine. So the
+    IPv6 answer was unusable, and IPv4 was used instead.</p>
+
+    <p>That quiet fallback has a name — <strong>Happy Eyeballs</strong> —
+    and it is why twenty-five years of IPv6 rollout has not broken the web.
+    Things try both and use what works, without telling you.</p>
   </section>
 
   <section>
@@ -406,7 +671,16 @@
       <div class="vrow"><dt>DNS</dt><dd>The system that turns a name into an address.</dd></div>
       <div class="vrow"><dt>capture</dt><dd>A saved recording of packets. Yours is <code>out/capture.pcap</code>.</dd></div>
       <div class="vrow"><dt>tcpdump</dt><dd>The tool that records packets and prints them as text.</dd></div>
-      <div class="vrow"><dt>interface</dt><dd>A network connection on your machine. <code>eth0</code> goes outside; <code>lo</code> loops back to itself.</dd></div>
+      <div class="vrow"><dt>interface</dt><dd>A door out of your machine. <code>eth0</code> goes outside; <code>lo</code> loops back to itself.</dd></div>
+      <div class="vrow"><dt>loopback</dt><dd>The interface that never leaves the machine. <code>127.0.0.1</code>, also known as <code>localhost</code>.</dd></div>
+      <div class="vrow"><dt>curl</dt><dd>A program that fetches things from the internet and prints them. A browser with no window.</dd></div>
+      <div class="vrow"><dt>dig</dt><dd>A program whose only job is asking name questions.</dd></div>
+      <div class="vrow"><dt>A record</dt><dd>An IPv4 address for a name.</dd></div>
+      <div class="vrow"><dt>AAAA record</dt><dd>An IPv6 address for a name.</dd></div>
+      <div class="vrow"><dt>transaction ID</dt><dd>A number stamped on a name question and copied onto its answer, so replies can be matched to questions.</dd></div>
+      <div class="vrow"><dt>router</dt><dd>The machine you hand a packet to when the destination is not your neighbour. Yours is <code>172.26.0.1</code>.</dd></div>
+      <div class="vrow"><dt>default route</dt><dd>The rule that catches every address you do not recognise.</dd></div>
+      <div class="vrow"><dt>/20, /32</dt><dd>How big your neighbourhood is. Bigger number, smaller neighbourhood.</dd></div>
     </dl>
   </section>
 
@@ -432,12 +706,33 @@
       <div class="cmd"><code>tcpdump -r out/capture.pcap -nn port 443</code><span class="what">only encrypted web</span></div>
     </div>
 
+    <p class="cmdgroup" style="margin-top:22px">Looking at your own machine</p>
+    <div class="cmds">
+      <div class="cmd"><code>ip -br addr show</code><span class="what">your doors and their addresses</span></div>
+      <div class="cmd"><code>ip route show</code><span class="what">your whole routing rulebook</span></div>
+      <div class="cmd"><code>ip route get 8.8.8.8</code><span class="what">direct or via the router?</span></div>
+      <div class="cmd"><code>cat /etc/resolv.conf</code><span class="what">which name server you use</span></div>
+      <div class="cmd"><code>curl -s ifconfig.me</code><span class="what">your public address</span></div>
+    </div>
+
+    <p class="cmdgroup" style="margin-top:22px">Sending something on purpose</p>
+    <div class="cmds">
+      <div class="cmd"><code>curl https://example.com</code><span class="what">fetch a page and print it</span></div>
+      <div class="cmd"><code>curl -s -o /dev/null https://example.com</code><span class="what">fetch it and throw it away</span></div>
+      <div class="cmd"><code>dig +short example.com</code><span class="what">just ask for the address</span></div>
+      <div class="cmd"><code>ping -c 3 8.8.8.8</code><span class="what">send three "are you there?" packets</span></div>
+    </div>
+
     <p class="cmdgroup" style="margin-top:22px">What the flags mean</p>
     <dl class="vocab">
       <div class="vrow"><dt>-r</dt><dd>read from a saved file instead of the live network</dd></div>
       <div class="vrow"><dt>-nn</dt><dd>show raw numbers — do not turn addresses into names or ports into service names. Without this, tcpdump makes extra lookups that pollute what you are trying to watch.</dd></div>
       <div class="vrow"><dt>-i any</dt><dd>record from every interface at once (used by <code>capture.sh</code>)</dd></div>
       <div class="vrow"><dt>-w file</dt><dd>write packets to a file instead of the screen</dd></div>
+      <div class="vrow"><dt>-s</dt><dd>curl: stay silent, no progress bar</dd></div>
+      <div class="vrow"><dt>-o /dev/null</dt><dd>curl: throw the page away. The lab uses this because it wants the packets, not the page — which is why curl appeared to do nothing.</dd></div>
+      <div class="vrow"><dt>-4 / -6</dt><dd>curl: force IPv4 or IPv6 only, instead of choosing</dd></div>
+      <div class="vrow"><dt>-br</dt><dd>ip: brief output, one line per interface</dd></div>
     </dl>
   </section>
 

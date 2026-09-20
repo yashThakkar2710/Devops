@@ -132,7 +132,85 @@ to `1.1.1.1` port 53, asking for the address of `example.com`.
 The reply is the same line with the ends swapped and `Out` replaced by
 `In`. That reversal is the entire matching mechanism.
 
-### 2.4 The name lookup
+### 2.4 Interfaces: the doors out of a machine
+
+An **interface** is a way out of a computer. `ip -br addr show`:
+
+```
+lo      UNKNOWN   127.0.0.1/8  10.255.255.254/32  ::1/128
+eth0    UP        172.26.1.224/20  fe80::215:5dff:feee:ae93/64
+```
+
+- **`eth0`** — the real door. Packets through it leave the machine.
+- **`lo`** — loopback. Packets through it never leave. This is what
+  `localhost` has always been.
+
+Loopback exists so programs on one machine can talk to each other without
+inventing a second mechanism. Same addressing, same ports, same rules, no
+cable.
+
+Two ways to spot loopback in a capture: the interface name is the second
+item on the line, and on a loopback line **both addresses are identical**.
+
+### 2.5 A machine has several addresses, all correct at once
+
+| Address | On | Visible to |
+|---|---|---|
+| `127.0.0.1` | lo | programs on this machine |
+| `10.255.255.254` | lo | WSL's DNS helper only |
+| `172.26.1.224` | eth0 | the local network |
+| `172.26.0.1` | the router | the way out |
+| (public address) | the ISP | the entire internet |
+
+Find the public one with `curl -s ifconfig.me`. It belongs to the router,
+and everything in the building shares it. Phase 2 covers why (NAT).
+
+**The slash number** says how large the neighbourhood is:
+
+| Written | Addresses |
+|---|---|
+| `/32` | 1 |
+| `/24` | 256 |
+| `/20` | 4,096 |
+| `/8` | 16,777,216 |
+
+Bigger number, smaller neighbourhood. Fully covered in Phase 2.
+
+### 2.6 The routing decision
+
+Before sending, the machine asks one question: **is this address in my
+neighbourhood?** `ip route get` shows the answer without sending anything.
+
+```
+$ ip route get 172.26.1.99
+172.26.1.99 dev eth0 src 172.26.1.224          ← no "via": direct
+
+$ ip route get 8.8.8.8
+8.8.8.8 via 172.26.0.1 dev eth0                ← "via": hand to the router
+
+$ ip route get 127.0.0.1
+local 127.0.0.1 dev lo                         ← never leaves
+```
+
+The whole rulebook is two lines:
+
+```
+$ ip route show
+default       via 172.26.0.1 dev eth0
+172.26.0.0/20               dev eth0
+```
+
+```
+Is it inside 172.26.0.0/20?   yes → straight out eth0
+                              no  → "default" → give to 172.26.0.1
+```
+
+`default` catches every address the machine does not recognise — billions
+of them, in one line. This is the "nobody knows the whole route" property
+made concrete: the machine has no idea where `8.8.8.8` is, only that it is
+not local.
+
+### 2.7 The name lookup
 
 ```
 0 ms    Out   172.26.1.224.59573 > 1.1.1.1.53    A? example.com.
@@ -141,6 +219,46 @@ The reply is the same line with the ends swapped and `Out` replaced by
 
 A name in, an address out. This is **DNS**. It has to happen before
 anything else, because the rest of the machinery only understands numbers.
+
+### 2.8 Lines 3–6: two questions, and why they need IDs
+
+The capture contains a *second* lookup, on loopback:
+
+```
+3  .333082  lo  10.255.255.254.42162 > …53   47200+  A?    example.com.
+4  .333109  lo  10.255.255.254.42162 > …53   38510+  AAAA? example.com.
+5  .366140  lo  …53 > 10.255.255.254.42162   38510   AAAA  2606:4700:9a65:…
+6  .370801  lo  …53 > 10.255.255.254.42162   47200   A     104.20.23.154, 172.66.147.243
+```
+
+Lines 1–2 were `dig` (a tool that only asks name questions, run by the lab
+to guarantee a visible lookup). Lines 3–6 are `curl` asking for itself.
+**Programs do not share name answers with each other.**
+
+**Two address families.** `A?` asks for an IPv4 address; `AAAA?` asks for
+IPv6. IPv4's roughly 4.3 billion addresses ran out; IPv6 is the
+replacement. The transition has taken twenty-five years and is unfinished,
+so programs ask for both. The two questions went out 27 *microseconds*
+apart — asking sequentially would have doubled the delay.
+
+**The answers came back in the wrong order.** Question `47200` (A) was
+asked first and answered second. And both questions used the **same source
+port**, `42162`, so the two replies are indistinguishable from the outside.
+The only thing pairing them is the **transaction ID** copied from question
+to answer.
+
+This is the observed justification for a mechanism usually taught as a bare
+fact. There is a second, security reason for the ID being random — Phase 4.
+
+**Two answers for one name.** `2/0/0` means two answer records:
+`104.20.23.154` and `172.66.147.243`. Either works; packet 7 used the
+first.
+
+**The IPv6 answer was ignored.** There is no IPv6 default route out of WSL,
+and `curl -6` fails while `curl -4` succeeds. The `fe80::` address on
+`eth0` is link-local and cannot leave. The silent fallback to IPv4 is
+called **Happy Eyeballs**, and it is why an unfinished IPv6 transition has
+not broken the web.
 
 ## 3. The lab
 

@@ -29,3 +29,24 @@ Answer out loud or in writing **before** looking anything up.
 
 If you can only answer a question by re-reading the module, mark it and
 return tomorrow. Recognition is not retention.
+
+## 00-01 · lines 3–6 and the routing decision
+
+8. Your machine has five addresses at once. Why is "what is my IP address"
+   not a well-formed question?
+
+9. `ip route get 8.8.8.8` prints `via 172.26.0.1`. What does the presence
+   of that word tell you, and what would its absence tell you?
+
+10. Your entire routing table is two lines, yet it can handle every address
+    on the internet. How?
+
+11. `curl` sent two name questions from the **same** source port, and the
+    answers came back in the opposite order to the questions. What exactly
+    stops the two replies being confused with each other?
+
+12. Your machine asked for an IPv6 address, received a valid one, and then
+    used IPv4. Was that a bug? What evidence would settle it?
+
+13. Why does `dig` asking a name, and `curl` asking the same name moments
+    later, produce two separate lookups rather than one?
