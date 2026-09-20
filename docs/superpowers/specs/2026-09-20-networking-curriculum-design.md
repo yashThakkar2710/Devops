@@ -1,4 +1,4 @@
-# Deep Networking Curriculum — Design Spec
+# Deep Networking and Linux Curriculum — Design Spec
 
 **Date:** 2026-09-20
 **Status:** Approved design, pending implementation plan
@@ -8,7 +8,7 @@
 
 ## 1. Goal
 
-Build a complete, self-contained system for learning computer networking from first principles to production DevOps depth, such that the learner never needs to relearn the material.
+Build a complete, self-contained system for learning computer networking and Linux systems from first principles to production DevOps depth, such that the learner never needs to relearn the material.
 
 The success criterion is **conceptual clarity, not coverage**. The learner must be able to *derive* answers from a causal model rather than recall facts. A module has succeeded when its mechanism can be explained to someone else without notes, including why it was designed that way and how it fails.
 
@@ -28,6 +28,13 @@ The success criterion is **conceptual clarity, not coverage**. The learner must 
 1. **Phase 0** — trace one real HTTP request end to end at surface level. Output is a labelled map of what the learner cannot yet explain.
 2. **Phases 1–9** — rigorous bottom-up progression. Each phase fills in regions of that map.
 3. **Capstone** — re-trace the identical request, explaining every byte, every layer, and every kernel hop.
+
+Two Linux phases are interleaved rather than taught as one block, because Linux knowledge is needed at two distinct moments for two distinct reasons:
+
+- **Phase L1** sits between Phase 0 and Phase 1. It supplies enough working knowledge to run labs without fighting the terminal. Critically it establishes file descriptors, without which `03-01` ("what a socket is in the kernel") has no foundation to stand on.
+- **Phase L2** sits between Phase 5 and Phase 6. It supplies the systems depth that makes the kernel datapath comprehensible. Deferring it to this point means the material is applied within days rather than months, and cgroups/namespaces/overlayfs arrive immediately before the container phases they explain.
+
+Teaching both blocks up front was rejected: L2 material decays without immediate application, and three months separate an up-front L2 from Phase 6.
 
 Rejected alternatives:
 
@@ -77,11 +84,25 @@ No simulator (GNS3/Packet Tracer) and no VM hypervisor are required. All topolog
 
 ## 5. Curriculum
 
-Approximately **70 modules, ~210 hours**. At 3–4 hrs/day this is 8–10 weeks of study time; 3 months is the realistic calendar estimate.
+**83 modules, ~247 hours.** At 3–4 hrs/day this is 10–12 weeks of study time; **4 months is the realistic calendar estimate.**
+
+Study order: `0 → L1 → 1 → 2 → 3 → 4 → 5 → L2 → 6 → 7 → 8 → 9`.
 
 ### Phase 0 — The Map (1 module, ~3h)
 
 - `00-01` Journey of a request: lab setup, capture one HTTPS request end to end, name every layer, produce the map of ignorance.
+
+### Phase L1 — Linux Working Knowledge (5 modules, ~13h)
+
+Positioned after Phase 0, before Phase 1. Goal is competence at the terminal, not mastery. The learner is a developer and will move quickly here; skimming known material is expected and encouraged.
+
+- `L1-01` Kernel vs userspace, syscalls, and `/proc` and `/sys` as interfaces
+- `L1-02` Filesystem, paths, permissions, users, sudo
+- `L1-03` Processes, signals, and **file descriptors** — "everything is a file"
+- `L1-04` The shell for real: pipes, redirection, exit codes, job control
+- `L1-05` Packages, systemd services, logs and journald
+
+Key insight target: a socket is a file descriptor. Establishing this here converts `03-01` from a new concept into a familiar one pointed at the network.
 
 ### Phase 1 — Link Layer (7 modules, ~18h)
 
@@ -156,6 +177,21 @@ Key insight targets: DNS as a distributed cache with no invalidation; SNI transm
 
 Key insight target: HTTP/3 abandoning TCP is an admission that in-order delivery is the wrong abstraction for multiplexed streams, and that middlebox ossification made TCP itself unfixable.
 
+### Phase L2 — Linux Systems Internals (8 modules, ~26h)
+
+Positioned immediately before Phase 6, so the material is applied within days of being learned.
+
+- `L2-01` Syscalls under the microscope: `strace`, the cost of the userspace/kernel transition
+- `L2-02` Process internals: fork/exec, scheduling, process states
+- `L2-03` Memory: virtual memory, page cache, the OOM killer, why `free` is misleading
+- `L2-04` **cgroups**: what a resource limit actually is, and why a container was OOM-killed
+- `L2-05` **Namespaces**, all eight types — the isolation half of containers
+- `L2-06` Storage, filesystems, and **overlayfs** — how a container image actually works
+- `L2-07` systemd in depth: units, dependency ordering, socket activation
+- `L2-08` Performance methodology: the USE method, `vmstat`/`iostat`/`perf`, flamegraphs
+
+Key insight target: `L2-04` + `L2-05` + `L2-06` constitute containers in full — limits, isolation, and images. By Phase 7, Docker should be a thing the learner could rebuild rather than a tool they invoke.
+
 ### Phase 6 — Linux Networking Internals (10 modules, ~30h)
 
 **The highest-leverage phase in the curriculum.**
@@ -219,7 +255,11 @@ C:\Devops\
   PROGRESS.md                 master checklist of all modules
   docs/
     phase-0-map/00-01-journey-of-a-request.md
+    phase-l1-linux-foundations/L1-01-....md
     phase-1-link-layer/01-01-....md
+    ...
+    phase-l2-linux-internals/L2-01-....md
+    phase-6-linux-networking/06-01-....md
     ...
     superpowers/specs/        design specs (this file)
   labs/
@@ -292,8 +332,28 @@ The system has succeeded when the learner can:
 4. Derive, not recall, why a mechanism is designed the way it is.
 5. Return to any topic months later via the docs and re-acquire it in minutes rather than relearning it.
 
+## 10a. Relationship to the wider DevOps skill set
+
+This curriculum is **Project 1 of an expected three**. On completion the learner will hold networking and Linux at a depth exceeding most working DevOps engineers, plus the networking slice of containers, Kubernetes and cloud.
+
+Deliberately **not** covered here, and expected to form later projects (~3–4 further months):
+
+| Area | State after this project |
+|---|---|
+| AWS breadth: IAM, EC2/ASG, S3, RDS, cost | Networking services only |
+| Terraform / infrastructure as code | Not covered |
+| CI/CD pipelines and deployment strategies | Not covered |
+| Kubernetes operations: workloads, Helm, RBAC, storage, autoscaling | Networking only |
+| Observability: Prometheus, Grafana, tracing, SLOs | Network tooling only |
+| Secrets management and supply-chain security | TLS/PKI only |
+
+The sequencing rationale: the remaining material is tool-shaped and largely rule-based, and is acquired far faster by someone who can already reason about packets, processes and namespaces. The foundational material is the slow part and is taken first deliberately.
+
+Later projects are intentionally left undesigned. Requirements will be clearer from the far side of this one.
+
 ## 11. Out of scope
 
+- Linux kernel development: writing kernel modules, reading kernel source, driver authoring. Linux *usage and internals* are in scope via Phases L1 and L2; modifying the kernel is not.
 - Wireless (802.11) beyond a conceptual mention; not relevant to the target role.
 - Physical layer detail below framing: modulation, line coding, optics.
 - Telco/carrier material: MPLS, SDH, carrier Ethernet.
