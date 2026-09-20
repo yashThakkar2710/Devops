@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phase 0 · Journey of a request</title>
+<link rel="stylesheet" href="assets/site.css">
+<style>
+  /* Segment colours. These are a teaching device: the same hue means the
+     same thing everywhere on this page, so "blue = who sent it" sticks. */
+  :root {
+    --s-time:  #6e7681;
+    --s-iface: #a371f7;
+    --s-dir:   #f0883e;
+    --s-from:  #4493f8;
+    --s-to:    #3fb950;
+    --s-port:  #d29922;
+    --s-msg:   #f778ba;
+  }
+  :root[data-theme="light"] {
+    --s-time:  #6e7681;
+    --s-iface: #8250df;
+    --s-dir:   #bc4c00;
+    --s-from:  #0969da;
+    --s-to:    #1a7f37;
+    --s-port:  #9a6700;
+    --s-msg:   #bf3989;
+  }
+
+  .crumb { padding: 20px 0 0; font-size: 13px; }
+  .crumb a { color: var(--accent); text-decoration: none; }
+  .crumb a:hover { text-decoration: underline; }
+
+  .lede { padding: 22px 0 34px; max-width: 64ch; }
+  .lede h1 { margin: 0 0 10px; font-size: 26px; letter-spacing: -.02em; }
+  .lede p { margin: 0; color: var(--ink-dim); }
+
+  section { padding: 34px 0; border-top: 1px solid var(--line); }
+  section > h2 {
+    margin: 0 0 6px; font-size: 17px; letter-spacing: -.01em;
+  }
+  section > .sub { margin: 0 0 22px; color: var(--ink-dim); font-size: 14px; max-width: 64ch; }
+  p { max-width: 64ch; }
+
+  /* ---- Hero: the dissectable packet line ---- */
+  .dissect {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 22px 18px;
+    overflow-x: auto;
+  }
+  .pktline {
+    font-family: var(--mono); font-size: clamp(13px, 1.9vw, 19px);
+    line-height: 2.4; white-space: nowrap; display: flex; flex-wrap: wrap;
+    gap: 0 .5ch; align-items: baseline;
+  }
+  .seg {
+    position: relative; cursor: pointer; border: 0; padding: 2px 4px;
+    background: transparent; font: inherit; color: var(--c);
+    border-bottom: 2px solid var(--c); border-radius: 3px 3px 0 0;
+  }
+  .seg:hover, .seg:focus-visible { background: color-mix(in srgb, var(--c) 18%, transparent); }
+  .seg[aria-pressed="true"] { background: color-mix(in srgb, var(--c) 26%, transparent); }
+  .seg:focus-visible { outline: 2px solid var(--c); outline-offset: 1px; }
+  .punct { color: var(--ink-faint); font-family: var(--mono); }
+
+  .readout {
+    margin-top: 18px; border-left: 3px solid var(--c, var(--line));
+    padding: 2px 0 2px 16px; min-height: 66px;
+  }
+  .readout .rtitle { font-weight: 600; margin: 0 0 4px; color: var(--c, var(--ink)); }
+  .readout .rbody { margin: 0; color: var(--ink-dim); font-size: 14px; max-width: 60ch; }
+  .readout .rhint { color: var(--ink-faint); font-style: italic; }
+
+  /* ---- Building / rooms ---- */
+  .building-row { display: grid; grid-template-columns: 1fr auto 1fr; gap: 18px; align-items: center; }
+  .building {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: var(--radius); overflow: hidden;
+  }
+  .building > header {
+    padding: 10px 14px; border-bottom: 1px solid var(--line);
+    font-family: var(--mono); font-size: 13px;
+  }
+  .building .ip { color: var(--s-to); }
+  .building.you .ip { color: var(--s-from); }
+  .room {
+    display: flex; gap: 12px; padding: 9px 14px; font-size: 13.5px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .room:last-child { border-bottom: 0; }
+  .room .n { font-family: var(--mono); color: var(--s-port); min-width: 4ch; }
+  .room.lit { background: color-mix(in srgb, var(--s-port) 13%, transparent); }
+  .room.lit .w { color: var(--ink); }
+  .room .w { color: var(--ink-dim); }
+  .arrowcol { text-align: center; color: var(--ink-faint); font-family: var(--mono); font-size: 20px; }
+
+  /* ---- DNS exchange ---- */
+  .exchange { display: grid; gap: 0; }
+  .xrow {
+    display: grid; grid-template-columns: 7ch 1fr; gap: 14px; align-items: start;
+    padding: 14px 0; border-bottom: 1px dashed var(--line);
+  }
+  .xrow:last-child { border-bottom: 0; }
+  .xt { font-family: var(--mono); font-size: 12.5px; color: var(--ink-faint); padding-top: 3px; }
+  .xmsg { font-family: var(--mono); font-size: 13.5px; }
+  .xmsg .q { color: var(--s-msg); }
+  .xsay { margin: 5px 0 0; font-size: 14px; color: var(--ink-dim); }
+  .dirtag {
+    font-family: var(--mono); font-size: 11px; padding: 1px 6px; border-radius: 4px;
+    border: 1px solid currentColor; margin-right: 8px;
+  }
+  .dirtag.out { color: var(--s-dir); }
+  .dirtag.in  { color: var(--s-to); }
+
+  /* ---- Timeline ---- */
+  .tl { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px 18px 14px; }
+  .tlbar { position: relative; height: 46px; border-radius: 6px; overflow: hidden; display: flex; }
+  .tlseg { position: relative; height: 100%; }
+  .tlseg span {
+    position: absolute; inset: 0; display: grid; place-items: center;
+    font-family: var(--mono); font-size: 11px; color: #0d1117; font-weight: 600;
+  }
+  .tlticks { position: relative; height: 34px; margin-top: 6px; }
+  .tick { position: absolute; top: 0; transform: translateX(-50%); text-align: center; }
+  .tick i { display: block; width: 1px; height: 6px; background: var(--line); margin: 0 auto 3px; }
+  .tick b { font-family: var(--mono); font-size: 11px; font-weight: 400; color: var(--ink-faint); }
+  .tlkey { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 14px; font-size: 13px; }
+  .tlkey div { display: flex; align-items: center; gap: 7px; color: var(--ink-dim); }
+  .tlkey i { width: 11px; height: 11px; border-radius: 3px; flex: none; }
+  .verdict {
+    margin-top: 22px; padding: 16px 18px; border-radius: var(--radius);
+    background: color-mix(in srgb, var(--s-dir) 10%, var(--panel));
+    border: 1px solid color-mix(in srgb, var(--s-dir) 35%, var(--line));
+  }
+  .verdict p { margin: 0; max-width: 68ch; }
+  .verdict .big { font-size: 17px; font-weight: 600; margin-bottom: 4px; }
+
+  /* ---- Commands ---- */
+  .cmds { display: grid; gap: 10px; }
+  .cmd {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px;
+    align-items: center; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 8px; padding: 11px 13px;
+  }
+  .cmd code {
+    font-family: var(--mono); font-size: 13px; color: var(--ink);
+    overflow-x: auto; white-space: pre;
+  }
+  .cmd .what { font-size: 13px; color: var(--ink-dim); text-align: right; }
+  .cmdgroup { margin: 0 0 8px; font-size: 13px; color: var(--ink-faint); }
+
+  .vocab { display: grid; gap: 0; }
+  .vrow { display: grid; grid-template-columns: 13ch 1fr; gap: 16px; padding: 11px 0; border-bottom: 1px solid var(--line-soft); }
+  .vrow:last-child { border-bottom: 0; }
+  .vrow dt { font-family: var(--mono); font-size: 13.5px; color: var(--accent); }
+  .vrow dd { margin: 0; font-size: 14px; color: var(--ink-dim); max-width: 60ch; }
+
+  @media (max-width: 720px) {
+    .building-row { grid-template-columns: 1fr; }
+    .arrowcol { transform: rotate(90deg); }
+    .cmd { grid-template-columns: 1fr; }
+    .cmd .what { text-align: left; }
+    .vrow { grid-template-columns: 1fr; gap: 3px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <div class="brand"><span class="brand-mark">//</span><span>Networking &amp; Linux</span></div>
+    <div class="topbar-tools"><button id="theme" type="button" title="Toggle theme">◐</button></div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <p class="crumb"><a href="index.html">← All phases</a></p>
+
+  <div class="lede">
+    <h1>Journey of a request</h1>
+    <p>Everything on this page comes from the capture you recorded in lab
+    <code>00-01</code>: 33 packets, 299 milliseconds, one visit to
+    example.com. Nothing here is an example — it is your machine.</p>
+  </div>
+
+  <section>
+    <h2>Read one line</h2>
+    <p class="sub">This is the very first packet your computer sent. Click any
+    coloured piece to find out what it is.</p>
+
+    <div class="dissect">
+      <div class="pktline" id="pktline"></div>
+      <div class="readout" id="readout">
+        <p class="rtitle">Pick a piece</p>
+        <p class="rbody rhint">Click any coloured part of the line above.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>An address gets you to the building. A port gets you to the room.</h2>
+    <p class="sub">Every line has two numbers on each side, separated by a dot.
+    The first says <em>which computer</em>. The second says <em>which program
+    inside it</em>.</p>
+
+    <div class="building-row">
+      <div class="building you">
+        <header>your machine · <span class="ip">172.26.1.224</span></header>
+        <div class="room lit"><span class="n">59573</span><span class="w">curl, waiting for its answer</span></div>
+        <div class="room"><span class="n">…</span><span class="w">picked at random, thrown away after</span></div>
+      </div>
+
+      <div class="arrowcol">→</div>
+
+      <div class="building">
+        <header>a name server · <span class="ip">1.1.1.1</span></header>
+        <div class="room lit"><span class="n">53</span><span class="w">answers questions about names</span></div>
+        <div class="room"><span class="n">80</span><span class="w">plain web pages</span></div>
+        <div class="room"><span class="n">443</span><span class="w">encrypted web pages</span></div>
+      </div>
+    </div>
+
+    <p style="margin-top:20px">Port <code>53</code> means name lookups
+    everywhere in the world. Port <code>443</code> means encrypted web,
+    everywhere. These are fixed agreements, not settings on your machine —
+    which is the only reason a computer you have never met knows what you are
+    asking for.</p>
+
+    <p>Your own port, <code>59573</code>, was picked at random a moment before
+    you sent the question. It exists so that when an answer arrives, your
+    computer knows which of its running programs was waiting for it.</p>
+  </section>
+
+  <section>
+    <h2>The name lookup, both halves</h2>
+    <p class="sub">Two packets. A question and its answer. Notice what swaps
+    between them.</p>
+
+    <div class="exchange">
+      <div class="xrow">
+        <div class="xt">0 ms</div>
+        <div>
+          <div class="xmsg"><span class="dirtag out">Out</span>172.26.1.224.59573 &gt; 1.1.1.1.53 &nbsp;<span class="q">A? example.com.</span></div>
+          <p class="xsay">Where does example.com live?</p>
+        </div>
+      </div>
+      <div class="xrow">
+        <div class="xt">83 ms</div>
+        <div>
+          <div class="xmsg"><span class="dirtag in">In</span>1.1.1.1.53 &gt; 172.26.1.224.59573 &nbsp;<span class="q">A 104.20.23.154</span></div>
+          <p class="xsay">At 104.20.23.154.</p>
+        </div>
+      </div>
+    </div>
+
+    <p style="margin-top:20px">The addresses and ports are identical in both
+    lines, just reversed. That reversal is the whole mechanism: it is how your
+    computer matches an answer to the question it asked, with no memory of the
+    conversation required anywhere in between.</p>
+
+    <p>Your capture actually shows this happening <strong>twice</strong> —
+    once because the lab asked <code>1.1.1.1</code> directly, and again
+    because <code>curl</code> then made its own lookup through WSL. The second
+    one asked two questions at once: <code>A?</code> for an old-style address
+    and <code>AAAA?</code> for a new-style one. It received both, and used the
+    old-style one. Why it does that is a Phase 2 question.</p>
+  </section>
+
+  <section>
+    <h2>Where the 299 milliseconds went</h2>
+    <p class="sub">All 33 packets, drawn to scale. Each block is real elapsed
+    time from your capture.</p>
+
+    <div class="tl">
+      <div class="tlbar" id="tlbar"></div>
+      <div class="tlticks" id="tlticks"></div>
+      <div class="tlkey" id="tlkey"></div>
+    </div>
+
+    <div class="verdict">
+      <p class="big">259 ms of getting ready. 11 ms of actually talking.</p>
+      <p>Finding the address, agreeing to connect, and proving identity took
+      87% of the time. The page itself — the thing you wanted — arrived in the
+      last few percent. Most of what makes the modern web fast is the long
+      fight to shrink those first three blocks.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Words you now own</h2>
+    <dl class="vocab">
+      <div class="vrow"><dt>packet</dt><dd>One small chunk of a message. Big things are cut into many.</dd></div>
+      <div class="vrow"><dt>IP address</dt><dd>Which machine. <code>172.26.1.224</code> is yours; <code>104.20.23.154</code> is the server you reached.</dd></div>
+      <div class="vrow"><dt>port</dt><dd>Which program inside that machine. 53 is name lookups, 443 is encrypted web.</dd></div>
+      <div class="vrow"><dt>DNS</dt><dd>The system that turns a name into an address.</dd></div>
+      <div class="vrow"><dt>capture</dt><dd>A saved recording of packets. Yours is <code>out/capture.pcap</code>.</dd></div>
+      <div class="vrow"><dt>tcpdump</dt><dd>The tool that records packets and prints them as text.</dd></div>
+      <div class="vrow"><dt>interface</dt><dd>A network connection on your machine. <code>eth0</code> goes outside; <code>lo</code> loops back to itself.</dd></div>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Commands from this lab</h2>
+    <p class="sub">Every command here appeared in lab <code>00-01</code>.
+    Nothing is listed that you have not already run.</p>
+
+    <p class="cmdgroup">Running the lab</p>
+    <div class="cmds">
+      <div class="cmd"><code>cd /mnt/c/Devops/labs/phase-0-map/00-01-first-capture</code><span class="what">go to the lab</span></div>
+      <div class="cmd"><code>bash setup.sh</code><span class="what">record a fresh capture</span></div>
+      <div class="cmd"><code>bash verify.sh</code><span class="what">check it worked</span></div>
+      <div class="cmd"><code>bash teardown.sh</code><span class="what">delete the capture</span></div>
+    </div>
+
+    <p class="cmdgroup" style="margin-top:22px">Reading a capture</p>
+    <div class="cmds">
+      <div class="cmd"><code>tcpdump -r out/capture.pcap -nn</code><span class="what">print every packet</span></div>
+      <div class="cmd"><code>tcpdump -r out/capture.pcap -nn | head -3</code><span class="what">just the first three</span></div>
+      <div class="cmd"><code>tcpdump -r out/capture.pcap -nn | cat -n</code><span class="what">add line numbers</span></div>
+      <div class="cmd"><code>tcpdump -r out/capture.pcap -nn port 53</code><span class="what">only name lookups</span></div>
+      <div class="cmd"><code>tcpdump -r out/capture.pcap -nn port 443</code><span class="what">only encrypted web</span></div>
+    </div>
+
+    <p class="cmdgroup" style="margin-top:22px">What the flags mean</p>
+    <dl class="vocab">
+      <div class="vrow"><dt>-r</dt><dd>read from a saved file instead of the live network</dd></div>
+      <div class="vrow"><dt>-nn</dt><dd>show raw numbers — do not turn addresses into names or ports into service names. Without this, tcpdump makes extra lookups that pollute what you are trying to watch.</dd></div>
+      <div class="vrow"><dt>-i any</dt><dd>record from every interface at once (used by <code>capture.sh</code>)</dd></div>
+      <div class="vrow"><dt>-w file</dt><dd>write packets to a file instead of the screen</dd></div>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Still unexplained</h2>
+    <p class="sub">Open questions from your own capture. Each one is answered
+    by a later phase — this list is the map being filled in.</p>
+    <dl class="vocab">
+      <div class="vrow"><dt>Flags [S]</dt><dd>Three packets pass before any content moves. Why three and not two? → Phase 3</dd></div>
+      <div class="vrow"><dt>seq 639031898</dt><dd>Counting starts at a huge random number instead of zero. → Phase 3</dd></div>
+      <div class="vrow"><dt>win 64240</dt><dd>A number that shrinks to 502 and then drifts. → Phase 3</dd></div>
+      <div class="vrow"><dt>mss 1460 / 1282</dt><dd>The two machines disagree about the biggest packet allowed. → Phase 2</dd></div>
+      <div class="vrow"><dt>sack {684:743}</dt><dd>Two of your packets arrived in the wrong order and were silently repaired. → Phase 3</dd></div>
+      <div class="vrow"><dt>3,991 bytes</dt><dd>The identity proof was three times larger than the page it protected. → Phase 4</dd></div>
+    </dl>
+  </section>
+
+</main>
+
+<footer class="wrap foot">
+  <span>Phase 0 · module 00-01</span>
+  <span class="muted">Notes: <code>docs/phase-0-map/</code></span>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------- theme, shared with the dashboard ---------- */
+  var THEME = "netcurriculum.theme";
+  try {
+    var saved = localStorage.getItem(THEME);
+    if (saved) document.documentElement.dataset.theme = saved;
+  } catch (e) { /* storage may be blocked; the page still works */ }
+  document.getElementById("theme").addEventListener("click", function () {
+    var next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+    document.documentElement.dataset.theme = next;
+    try { localStorage.setItem(THEME, next); } catch (e) { /* ignore */ }
+  });
+
+  /* ---------- the dissectable line ----------
+     Packet 1 of the learner's own capture, split into the pieces that
+     carry meaning. Punctuation is kept inert so the line still reads
+     exactly as tcpdump printed it. */
+  var LINE = [
+    { t: "12:44:53.223421", v: "--s-time", title: "When it happened",
+      body: "Hours, minutes, seconds, and six more digits — microseconds. Packets are measured this finely because a whole conversation across the world fits inside a third of a second." },
+    { p: " " },
+    { t: "eth0", v: "--s-iface", title: "Which connection it used",
+      body: "A machine can have several network connections. eth0 is the one that leaves your computer. Later in your capture you will see lo, which is your machine talking to itself." },
+    { p: " " },
+    { t: "Out", v: "--s-dir", title: "It was leaving",
+      body: "This packet was sent by you. The reply on the next line says In. Direction is the first thing to check when reading a capture, because half of every problem is working out who spoke and who stayed silent." },
+    { p: " IP " },
+    { t: "172.26.1.224", v: "--s-from", title: "From: your machine",
+      body: "Your IP address inside WSL. Every machine that can be reached has one, and packets carry both ends so a reply knows where to go." },
+    { p: "." },
+    { t: "59573", v: "--s-port", title: "From port: picked at random",
+      body: "Which program on your machine is speaking. Your computer chose this number moments earlier and will forget it when the exchange ends. Its only job is to match the answer to the question." },
+    { p: " > " },
+    { t: "1.1.1.1", v: "--s-to", title: "To: a name server",
+      body: "A public server run by Cloudflare whose job is answering questions about names. Your capture chose it directly so the lookup could not be served from a cache." },
+    { p: "." },
+    { t: "53", v: "--s-port", title: "To port: name lookups",
+      body: "Port 53 means name lookups, on every machine on earth. That agreement is why a server you have never contacted knows what kind of question is arriving." },
+    { p: ": 21525+ [1au] " },
+    { t: "A? example.com.", v: "--s-msg", title: "The question itself",
+      body: "A? means: give me the address for this name. The trailing dot is the real, complete form of the name — the root of the whole naming system, which is usually hidden from you." },
+    { p: " (52)" }
+  ];
+
+  var lineEl = document.getElementById("pktline");
+  var readout = document.getElementById("readout");
+  var current = null;
+
+  LINE.forEach(function (part) {
+    if (part.p !== undefined) {
+      var s = document.createElement("span");
+      s.className = "punct";
+      s.textContent = part.p;
+      lineEl.appendChild(s);
+      return;
+    }
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "seg";
+    b.style.setProperty("--c", "var(" + part.v + ")");
+    b.textContent = part.t;
+    b.setAttribute("aria-pressed", "false");
+    b.addEventListener("click", function () {
+      if (current) current.setAttribute("aria-pressed", "false");
+      current = b;
+      b.setAttribute("aria-pressed", "true");
+      readout.style.setProperty("--c", "var(" + part.v + ")");
+      readout.innerHTML = "";
+      var h = document.createElement("p");
+      h.className = "rtitle";
+      h.textContent = part.title;
+      var p = document.createElement("p");
+      p.className = "rbody";
+      p.textContent = part.body;
+      readout.appendChild(h);
+      readout.appendChild(p);
+    });
+    lineEl.appendChild(b);
+  });
+
+  /* ---------- the to-scale timeline ----------
+     Boundaries are real packet timestamps from the capture, expressed as
+     milliseconds after packet 1. The content block is bounded by the
+     first and last packets carrying page data; the request itself is
+     encrypted, so its exact packet is not claimed. */
+  var TOTAL = 298.649;
+  var PHASES = [
+    { name: "Finding the address", short: "name lookup", from: 0,       to: 147.766, c: "--s-msg"  },
+    { name: "Agreeing to connect", short: "connect",     from: 147.766, to: 186.528, c: "--s-from" },
+    { name: "Proving identity",    short: "encryption",  from: 186.528, to: 258.909, c: "--s-iface"},
+    { name: "The page itself",     short: "content",     from: 258.909, to: 270.196, c: "--s-to"   },
+    { name: "Saying goodbye",      short: "close",       from: 270.196, to: 298.649, c: "--s-dir"  }
+  ];
+
+  var bar = document.getElementById("tlbar");
+  var key = document.getElementById("tlkey");
+
+  PHASES.forEach(function (ph) {
+    var ms = ph.to - ph.from;
+    var pct = (ms / TOTAL) * 100;
+
+    var seg = document.createElement("div");
+    seg.className = "tlseg";
+    seg.style.width = pct + "%";
+    seg.style.background = "var(" + ph.c + ")";
+    seg.title = ph.name + " — " + Math.round(ms) + " ms";
+    if (pct > 9) {
+      var lab = document.createElement("span");
+      lab.textContent = Math.round(ms) + " ms";
+      seg.appendChild(lab);
+    }
+    bar.appendChild(seg);
+
+    var k = document.createElement("div");
+    var sw = document.createElement("i");
+    sw.style.background = "var(" + ph.c + ")";
+    k.appendChild(sw);
+    k.appendChild(document.createTextNode(
+      ph.name + " · " + Math.round(ms) + " ms · " + Math.round((ms / TOTAL) * 100) + "%"
+    ));
+    key.appendChild(k);
+  });
+
+  var ticks = document.getElementById("tlticks");
+  [0, 50, 100, 150, 200, 250, 299].forEach(function (ms) {
+    var t = document.createElement("div");
+    t.className = "tick";
+    t.style.left = (ms / TOTAL) * 100 + "%";
+    var i = document.createElement("i");
+    var b2 = document.createElement("b");
+    b2.textContent = ms + (ms === 299 ? " ms" : "");
+    t.appendChild(i);
+    t.appendChild(b2);
+    ticks.appendChild(t);
+  });
+})();
+</script>
+</body>
+</html>

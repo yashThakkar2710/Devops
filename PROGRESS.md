@@ -4,15 +4,15 @@
      Tick boxes by hand; they survive regeneration.
      Do not edit anything else here - it will be overwritten. -->
 
-**0 / 83 modules complete** · ~247 hours total · study order is top to bottom.
+**1 / 83 modules complete** · ~247 hours total · study order is top to bottom.
 
 Spec: [design spec](docs/superpowers/specs/2026-09-20-networking-curriculum-design.md)
 
-## Phase 0 — The Map (0/1, ~3h)
+## Phase 0 — The Map (1/1, ~3h)
 
 `docs/phase-0-map/`
 
-- [ ] `00-01` Journey of a request: lab setup, capture one HTTPS request end to end, name every layer, produce the map of ignorance.
+- [x] `00-01` Journey of a request: lab setup, capture one HTTPS request end to end, name every layer, produce the map of ignorance.
 
 ## Phase L1 — Linux Working Knowledge (0/5, ~13h)
 

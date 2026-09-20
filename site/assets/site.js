@@ -7,6 +7,8 @@
 
   var STORE = "netcurriculum.progress";
   var THEME = "netcurriculum.theme";
+  /* Phase ids that have a page built. Add an id here when its page ships. */
+  var BUILT = ["0"];
   var phasesEl = document.getElementById("phases");
   var searchEl = document.getElementById("search");
   var emptyEl = document.getElementById("empty");
@@ -54,10 +56,16 @@
       var fill = el("div", "bar-fill");
       bar.appendChild(fill);
 
-      /* Per-phase visualization pages are built as each phase begins.
-         Until one exists, say so plainly rather than link to a 404. */
-      var viz = el("span", "viz-soon", "viz: not built yet");
-      viz.dataset.href = "phase-" + phase.id.toLowerCase() + ".html";
+      /* Per-phase pages are built as each phase begins. Listed explicitly
+         so an unbuilt phase shows a note instead of linking to a 404. */
+      var viz;
+      if (BUILT.indexOf(phase.id) !== -1) {
+        viz = el("a", "viz-link", "open page");
+        viz.href = "phase-" + phase.id.toLowerCase() + ".html";
+        viz.addEventListener("click", function (e) { e.stopPropagation(); });
+      } else {
+        viz = el("span", "viz-soon", "page not built yet");
+      }
 
       meta.appendChild(viz);
       meta.appendChild(count);
