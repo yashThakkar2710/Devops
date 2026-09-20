@@ -12,12 +12,60 @@ and how to read a single line of `tcpdump` output.
 
 ---
 
+## 0. What a network is
+
+**A network is two or more computers that can send each other messages.**
+That is the entire definition. Everything that follows in this curriculum is
+detail about making that happen reliably, quickly and securely.
+
+You need one because the thing you want is on a different computer than the
+one in front of you.
+
+### They are not plugged into each other
+
+Your laptop is not wired to a server in another country. The message travels
+in short jumps:
+
+```
+your laptop → home router → your ISP → ~10 more hops → the server
+172.26.1.224                                           104.20.23.154
+```
+
+**No machine in that chain knows the whole route.** Each one knows only
+where to pass the message next — like asking directions at every corner
+rather than memorising the map. That single property is what allows the
+internet to scale and to survive parts of itself breaking.
+
+### What physically travels
+
+Electricity down copper, light down glass fibre, radio through air. All
+three carry the same thing: **ones and zeros**. On or off, repeated very
+fast. Everything above that layer is agreements about what particular
+patterns mean.
+
+### Why it is cut into pieces
+
+A message is not sent in one go. It is cut into chunks called **packets**,
+for three reasons:
+
+1. **The line is shared.** If one person sent a 2 GB file as an unbroken
+   stream, everyone else would wait for it to finish.
+2. **Losing a little beats losing a lot.** Packets do get dropped. Resending
+   one small chunk is cheap; resending a whole film is not.
+3. **Pieces can take different routes.** If a path congests or breaks, later
+   packets go another way with nothing restarted.
+
+### What "the internet" is
+
+Many separate networks — a home, an office, a university, a hosting company
+— that have agreed to pass each other's packets. There is no central
+computer running it. It is an agreement, kept independently by millions of
+machines.
+
 ## 1. The problem
 
-Two computers want to exchange something. They are not connected by a wire
-you own, and the thing being sent is too big to send in one go.
-
-So it is cut into small chunks. Each chunk is a **packet**.
+Packets travel through machines that have never heard of you and keep no
+memory of the conversation.
 
 Every packet has to carry its own addressing, because nothing in between
 remembers the conversation. A packet arrives at a machine that has never

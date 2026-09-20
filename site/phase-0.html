@@ -27,6 +27,31 @@
     --s-msg:   #bf3989;
   }
 
+  h3.minor {
+    margin: 30px 0 10px; font-size: 15px; letter-spacing: -.01em;
+    color: var(--ink);
+  }
+
+  /* ---- hop chain ---- */
+  .hops {
+    display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px;
+    margin: 18px 0 22px;
+  }
+  .hop {
+    flex: 1 1 130px; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 8px; padding: 11px 13px; display: flex; flex-direction: column; gap: 3px;
+  }
+  .hop b { font-size: 13.5px; font-weight: 600; }
+  .hop span { font-family: var(--mono); font-size: 11.5px; color: var(--ink-faint); }
+  .hop.faded { border-style: dashed; opacity: .72; }
+  .hoparrow { display: grid; place-items: center; color: var(--ink-faint); font-family: var(--mono); }
+
+  /* ---- three reasons ---- */
+  .reasons { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 16px 0 20px; }
+  .reason { border-left: 2px solid var(--s-iface); padding: 2px 0 2px 14px; }
+  .reason b { display: block; font-size: 14px; margin-bottom: 4px; }
+  .reason p { margin: 0; font-size: 13.5px; color: var(--ink-dim); }
+
   .crumb { padding: 20px 0 0; font-size: 13px; }
   .crumb a { color: var(--accent); text-decoration: none; }
   .crumb a:hover { text-decoration: underline; }
@@ -184,6 +209,90 @@
     <code>00-01</code>: 33 packets, 299 milliseconds, one visit to
     example.com. Nothing here is an example — it is your machine.</p>
   </div>
+
+  <section>
+    <h2>What is a network?</h2>
+    <p class="sub">Start here. Nothing below assumes you know anything.</p>
+
+    <p><strong>A network is two or more computers that can send each other
+    messages.</strong> That is the whole definition. Everything else in this
+    curriculum is detail about how that happens reliably, quickly and
+    securely.</p>
+
+    <p>You need one because the thing you want — a web page, a file, a
+    message — is sitting on a different computer than the one in front of
+    you.</p>
+
+    <h3 class="minor">They are not plugged into each other</h3>
+
+    <p>Your laptop is not wired to a server in another country. The message
+    travels in short jumps, machine to machine:</p>
+
+    <div class="hops">
+      <div class="hop"><b>your laptop</b><span>172.26.1.224</span></div>
+      <div class="hoparrow">→</div>
+      <div class="hop"><b>home router</b><span>the box on your wall</span></div>
+      <div class="hoparrow">→</div>
+      <div class="hop"><b>your ISP</b><span>Airtel, Jio, …</span></div>
+      <div class="hoparrow">→</div>
+      <div class="hop faded"><b>≈ 10 more</b><span>undersea cables, other countries</span></div>
+      <div class="hoparrow">→</div>
+      <div class="hop"><b>the server</b><span>104.20.23.154</span></div>
+    </div>
+
+    <p><strong>No machine in that chain knows the whole route.</strong> Each
+    one knows only where to pass the message next — like asking for
+    directions at every corner instead of memorising the map. That single
+    idea is what allows the internet to be enormous and to keep working when
+    parts of it break.</p>
+
+    <h3 class="minor">What physically travels</h3>
+
+    <p>Electricity down copper wire. Light down glass fibre. Radio through
+    the air. They look completely different, but all three carry the same
+    thing: <strong>ones and zeros</strong>. On or off, over and over, very
+    fast.</p>
+
+    <p>Everything above that — every address, every page, every video call —
+    is agreements about what particular patterns of ones and zeros mean.</p>
+
+    <h3 class="minor">Why it is cut into pieces</h3>
+
+    <p>A message is not sent in one go. It is cut into small chunks, and each
+    chunk is called a <strong>packet</strong>. Three reasons:</p>
+
+    <div class="reasons">
+      <div class="reason">
+        <b>The line is shared</b>
+        <p>Everyone on the internet uses the same cables. If one person sent
+        a 2 GB file as a single unbroken stream, everyone else would wait for
+        it to finish.</p>
+      </div>
+      <div class="reason">
+        <b>Losing a little beats losing a lot</b>
+        <p>Something in the middle will occasionally drop a packet. Resending
+        one small chunk is cheap. Resending a whole film is not.</p>
+      </div>
+      <div class="reason">
+        <b>Pieces can take different routes</b>
+        <p>If one path gets congested or breaks, later packets simply go
+        another way. Nothing has to be restarted.</p>
+      </div>
+    </div>
+
+    <p>It is moving house. You cannot post a sofa, so you send many labelled
+    boxes, and the person at the other end puts everything back together.</p>
+
+    <h3 class="minor">So what is "the internet"?</h3>
+
+    <p>Many separate networks — your home, your office, a university, a
+    hosting company — that have agreed to pass each other's packets along.
+    There is no central computer running it. It is an agreement, kept by
+    millions of machines independently.</p>
+
+    <p>The rest of this page is one real message making that journey, and
+    coming back.</p>
+  </section>
 
   <section>
     <h2>Read one line</h2>
