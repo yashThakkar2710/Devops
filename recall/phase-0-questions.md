@@ -50,3 +50,32 @@ return tomorrow. Recognition is not retention.
 
 13. Why does `dig` asking a name, and `curl` asking the same name moments
     later, produce two separate lookups rather than one?
+
+## 00-01 · the handshake, RTT and TTL
+
+14. After two packets of the handshake, one side is still uncertain about
+    something. Which side, and what?
+
+15. Why is four packets unnecessary, given that three are required?
+
+16. Packet 7 has `seq 639031898` and packet 8 has `ack 639031899`. Explain
+    the difference of one.
+
+17. Your name lookup needed no handshake, but the page fetch did. What
+    property of the two conversations causes that difference?
+
+18. Pinging `127.0.0.1` gives 0.043 ms rather than 0 ms. What is being
+    measured?
+
+19. A reply arrives with `ttl=52`. What can you conclude, and what
+    assumption does that conclusion rest on?
+
+20. A traceroute shows `* * *` at hops 9 and 10, then a normal reply at
+    hop 11. Is the path broken? How do you know?
+
+21. Hop 5 of a traceroute reports 113 ms; the final hop reports 31 ms.
+    Explain how that is possible without either number being wrong.
+
+22. In one traceroute hop, two different addresses replied. What does that
+    tell you, and which earlier observation in the same capture does it
+    explain?

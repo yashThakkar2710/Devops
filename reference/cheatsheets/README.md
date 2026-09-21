@@ -54,3 +54,47 @@ no "via"   → direct, it is a neighbour
 | `curl -4 <url>` / `curl -6 <url>` | force one address family |
 | `dig +short example.com` | just the addresses |
 | `dig example.com @1.1.1.1` | ask a specific name server |
+
+## ping and traceroute — from module 00-01
+
+| Command | What it does |
+|---|---|
+| `ping -c 5 <addr>` | send 5 probes, report round trip time |
+| `ping -c 5 127.0.0.1` | RTT to yourself — not zero, ~0.04 ms |
+| `traceroute -n <addr>` | list every router on the way |
+| `sudo apt install -y traceroute` | install it |
+
+Reading `ping` output:
+
+```
+rtt min/avg/max/mdev = 23.6/25.9/27.8/1.4 ms
+                                       └─┬─┘
+                                      jitter
+ttl=52   → 64 − 52 = 12 routers in between
+ttl=64   → never left this machine
+```
+
+Reading `traceroute` output — three traps:
+
+```
+* * *              router chose not to reply. NOT broken.
+high middle times  routers deprioritise complaints. Only the LAST line matters.
+two addrs on one   parallel links. There is no single "the route".
+```
+
+Note: on Windows PowerShell the flag is `-n`, not `-c`. Everything in this
+curriculum runs in WSL, where it is `-c`. If a command says "bad value for
+option", check the prompt first.
+
+## TCP flags in tcpdump — from module 00-01
+
+The dot means ACK.
+
+| Shown | Meaning |
+|---|---|
+| `[S]` | SYN — "let's start" |
+| `[S.]` | SYN + ACK |
+| `[.]` | ACK — "got yours" |
+| `[P.]` | PUSH — actual content |
+| `[F.]` | FIN — "I'm finished" |
+| `[R]` | RST — "no, stop" |

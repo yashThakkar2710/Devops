@@ -92,6 +92,54 @@
   .cwires { width: 120px; height: 120px; }
   @media (max-width: 620px) { .crossing { grid-template-columns: 1fr; } .cwires { display: none; } }
 
+  /* ---- handshake stepper ---- */
+  .hs { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px 18px; margin: 18px 0 22px; }
+  .hswire { display: grid; grid-template-columns: 110px 1fr 110px; gap: 14px; align-items: center; }
+  .hsend { text-align: center; }
+  .hsend b { display: block; font-size: 14px; }
+  .hsend span { font-family: var(--mono); font-size: 11px; color: var(--ink-faint); }
+  .hstrack { display: grid; gap: 8px; min-height: 132px; align-content: center; }
+  .hspkt {
+    display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: center;
+    border: 1px solid var(--line); border-radius: 7px; padding: 8px 11px;
+    background: var(--panel-2); font-size: 13px;
+  }
+  .hspkt .flag { font-family: var(--mono); font-weight: 600; }
+  .hspkt .say { color: var(--ink-dim); font-size: 12.5px; }
+  .hspkt.r2l { direction: rtl; } .hspkt.r2l > * { direction: ltr; }
+  .hspkt.out { border-color: color-mix(in srgb, var(--s-from) 55%, var(--line)); }
+  .hspkt.out .flag { color: var(--s-from); }
+  .hspkt.in { border-color: color-mix(in srgb, var(--s-to) 55%, var(--line)); }
+  .hspkt.in .flag { color: var(--s-to); }
+  .hspkt.ghost { opacity: .22; }
+  .hsarrow { font-family: var(--mono); color: var(--ink-faint); font-size: 12px; }
+
+  .hsknow { margin: 20px 0 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .krow { display: grid; grid-template-columns: 1fr 5ch; gap: 10px; padding: 9px 13px; font-size: 13.5px; border-bottom: 1px solid var(--line-soft); align-items: center; }
+  .krow:last-child { border-bottom: 0; }
+  .krow.head { background: var(--panel-2); color: var(--ink-faint); font-size: 12px; }
+  .krow .mark { text-align: center; font-weight: 700; }
+  .krow.yes .mark { color: var(--done); }
+  .krow.no .mark { color: var(--s-dir); }
+  .krow.no { background: color-mix(in srgb, var(--s-dir) 9%, transparent); }
+  .hsnote { margin: 14px 0 0; font-size: 13.5px; color: var(--ink-dim); min-height: 3em; max-width: 64ch; }
+  .hsnote b { color: var(--ink); }
+  .hsbtns { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+  .btn {
+    font: inherit; font-size: 13px; padding: 7px 14px; cursor: pointer;
+    background: var(--panel-2); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 7px;
+  }
+  .btn:hover:not(:disabled) { border-color: var(--accent); }
+  .btn:disabled { opacity: .4; cursor: default; }
+  .btn.primary { background: color-mix(in srgb, var(--accent) 18%, transparent); border-color: color-mix(in srgb, var(--accent) 50%, transparent); color: var(--accent); }
+  .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  @media (max-width: 620px) {
+    .hswire { grid-template-columns: 1fr; }
+    .hsend { text-align: left; }
+  }
+
   .crumb { padding: 20px 0 0; font-size: 13px; }
   .crumb a { color: var(--accent); text-decoration: none; }
   .crumb a:hover { text-decoration: underline; }
@@ -643,6 +691,233 @@ $ curl -4 https://example.com   <span class="dim">→ 200 OK</span></pre>
   </section>
 
   <section>
+    <h2>Packets 7–9: the handshake</h2>
+    <p class="sub">Three packets, and every one of them carries
+    <code>length 0</code>. Nothing useful is sent. Here is why they are
+    worth the wait.</p>
+
+    <h3 class="minor">First, notice what the name lookup did not do</h3>
+    <pre class="dart wide">1  Out  A? example.com.       <span class="dim">← question</span>
+2  In   A 104.20.23.154       <span class="dim">← answer</span></pre>
+    <p>No handshake. It fired a question and got an answer. So why does
+    fetching a page need three extra packets first?</p>
+
+    <div class="iptable">
+      <div class="iprow head"><span></span><span>name lookup</span><span>fetching a page</span></div>
+      <div class="iprow"><span>size</span><span>one small question</span><span>thousands of bytes, many packets</span></div>
+      <div class="iprow"><span>if lost</span><span>just ask again</span><span>you would have to restart</span></div>
+      <div class="iprow"><span>order</span><span>one packet, order is meaningless</span><span>packet 7 must follow packet 6</span></div>
+    </div>
+
+    <p>A name lookup is shouting a question across a room. If nobody
+    answers, shout again. Fetching a page is a phone call: you need to know
+    someone is there, things must arrive in order, and you must notice if
+    something is dropped. <strong>The network itself provides none of
+    that.</strong></p>
+
+    <h3 class="minor">Two agreements about what packets mean</h3>
+    <div class="doors">
+      <div class="door">
+        <b class="dname">UDP</b>
+        <p class="dsub">fire and forget</p>
+        <p>Send it, hope it arrives, never check. No setup, no ordering, no
+        retrying. Cheap and fast. <strong>Your lines 1–6 used this.</strong></p>
+      </div>
+      <div class="door">
+        <b class="dname">TCP</b>
+        <p class="dsub">a proper conversation</p>
+        <p>Set up first, number everything, confirm receipt, resend what is
+        lost. Costs a handshake to begin. <strong>Your lines 7 onwards use
+        this.</strong></p>
+      </div>
+    </div>
+
+    <h3 class="minor">Flags</h3>
+    <p>Every TCP packet carries small on/off switches. In tcpdump,
+    <strong>the dot means ACK</strong> — so <code>[S.]</code> is SYN and ACK
+    together.</p>
+    <div class="iptable narrow">
+      <div class="iprow head"><span>shown</span><span>meaning</span></div>
+      <div class="iprow"><code>[S]</code><span>SYN — synchronize. "let's start"</span></div>
+      <div class="iprow"><code>[S.]</code><span>SYN + ACK — "let's start" and "got yours"</span></div>
+      <div class="iprow"><code>[.]</code><span>ACK — acknowledge. "got yours"</span></div>
+      <div class="iprow"><code>[P.]</code><span>PUSH — here is actual content</span></div>
+      <div class="iprow"><code>[F.]</code><span>FIN — "I am finished"</span></div>
+      <div class="iprow"><code>[R]</code><span>RST — "no. stop."</span></div>
+    </div>
+
+    <h3 class="minor">Step through it</h3>
+    <p class="sub">Each side picks a random starting number. For the
+    conversation to work, both must end up knowing the other's number
+    <em>and</em> knowing that the other knows theirs. Watch the fourth row.</p>
+
+    <div class="hs">
+      <div class="hswire">
+        <div class="hsend"><b>you</b><span>172.26.1.224</span></div>
+        <div class="hstrack" id="hstrack"></div>
+        <div class="hsend"><b>server</b><span>104.20.23.154</span></div>
+      </div>
+
+      <div class="hsknow" id="hsknow"></div>
+
+      <p class="hsnote" id="hsnote"></p>
+
+      <div class="hsbtns">
+        <button type="button" id="hsprev" class="btn">Back</button>
+        <button type="button" id="hsnext" class="btn primary">Send next packet</button>
+        <button type="button" id="hsreset" class="btn">Reset</button>
+      </div>
+    </div>
+
+    <h3 class="minor">Why not two, and why not four</h3>
+    <p>Two is not enough: after packet 2 the server still has no idea
+    whether its own number arrived. If it started sending data then, and
+    packet 2 had been lost, it would be talking to someone who never heard
+    it.</p>
+    <p>Four is unnecessary, because packet 2 does two jobs at once — it
+    confirms your number <em>and</em> carries its own.</p>
+    <pre class="dart wide">1.  send my number
+2.  confirm yours + send mine     <span class="dim">← two jobs, one packet</span>
+3.  confirm yours</pre>
+    <p>You cannot confirm a number before it has been sent. So three is not
+    a convention or a choice. <strong>It is the minimum that works.</strong></p>
+
+    <h3 class="minor">The numbers</h3>
+    <pre class="dart wide">7   seq <span class="hl-a">639031898</span>     <span class="dim">← your starting number</span>
+8   seq 3162034897    ack <span class="hl-a">639031899</span>   <span class="dim">← exactly one more</span></pre>
+    <p>An acknowledgement does not say "I received up to here". It says
+    <strong>"here is the next number I expect"</strong>. That one-off
+    difference is what the whole of TCP's reliability is built on — Phase 3.</p>
+    <p>Neither side starts counting at zero. If they did, every connection
+    would look identical, and a stray packet from an old dead connection
+    could be mistaken for part of a new one. There is a second reason
+    involving attackers guessing the number — also Phase 3.</p>
+    <p>Packet 9 shows <code>ack 1</code> because tcpdump switches to
+    relative numbering after the handshake, so you are not reading
+    ten-digit numbers all day. Add <code>-S</code> to see the real ones.</p>
+  </section>
+
+  <section>
+    <h2>How long things take, and how far away they are</h2>
+    <p class="sub">Two numbers hide in every reply: how long it took, and
+    how many machines it passed through.</p>
+
+    <h3 class="minor">RTT — round trip time</h3>
+    <p>How long a packet takes to go there and come back. Like shouting
+    across a canyon and timing the echo. You can measure it two ways.</p>
+
+    <pre class="dart wide">from the capture          from ping
+7  .371187  out           rtt min/avg/max = 23.6/25.9/27.8 ms
+8  .407645  in
+   └─ 36.5 ms ─┘</pre>
+
+    <div class="iptable narrow">
+      <div class="iprow head"><span>ping target</span><span>average RTT</span></div>
+      <div class="iprow"><code>104.20.23.154</code><span>25.95 ms — the server from the capture</span></div>
+      <div class="iprow"><code>1.1.1.1</code><span>25.91 ms</span></div>
+      <div class="iprow"><code>127.0.0.1</code><span>0.043 ms — yourself, ~600× faster</span></div>
+    </div>
+
+    <p>Pinging yourself is not free. <code>0.043 ms</code> is small, not
+    zero: the kernel still builds the packet, hands it to loopback, receives
+    it and replies. Worth remembering whenever someone says something is
+    local so it costs nothing.</p>
+
+    <p><strong>Why 26 ms and not instant?</strong> Distance. Light in glass
+    fibre covers about 200,000 km per second, and a dozen routers each pause
+    to look at the packet. London to Sydney and back is roughly 85 ms even
+    at the speed of light. <strong>You cannot reduce RTT. You can only
+    reduce how many round trips you need.</strong></p>
+
+    <h3 class="minor">Jitter</h3>
+    <pre class="dart wide">1.1.1.1:   32.8   25.8   <span class="hl-a">18.3</span>   26.7   25.9 ms
+           <span class="dim">same server, same five seconds, nearly 2× apart</span></pre>
+    <p>The wobble is queuing — your packet waiting behind other people's
+    packets at each router. <code>ping</code> reports it as
+    <code>mdev</code>. For a web page it hardly matters. For a voice call
+    jitter is worse than slowness, because it is what makes people sound
+    chopped up.</p>
+
+    <h3 class="minor">TTL — the hop counter hiding in every packet</h3>
+    <pre class="dart wide">from 104.20.23.154:  <span class="hl-a">ttl=52</span>   time=25.7 ms
+from 127.0.0.1:      <span class="hl-b">ttl=64</span>   time=0.026 ms</pre>
+
+    <p>Every packet is created with a counter, usually 64. Each router it
+    passes subtracts one. If it ever reaches zero the packet is destroyed.</p>
+
+    <p><strong>Why destroy packets?</strong> If two routers each think the
+    other knows the way, a packet bounces between them forever, and more
+    pile in behind it. TTL is the safety fuse.</p>
+
+    <pre class="dart wide">64 − 52 = 12 routers between you and that server</pre>
+
+    <p>The loopback reply still reads 64 because it passed through none.</p>
+
+    <h3 class="minor">And here they are</h3>
+    <p><code>traceroute</code> names every hop. It works by abusing TTL on
+    purpose: send a packet with TTL 1 and the first router kills it and
+    sends back a complaint, revealing itself. Then TTL 2 for the second, and
+    so on. You will write this tool yourself in Phase 2.</p>
+
+    <pre class="dart wide out"> 1  172.26.0.1              0.4 ms    <span class="dim">← inside your own PC</span>
+ 2  jiofiber.local.html    73.9 ms    <span class="dim">← your home router</span>
+ 3  192.0.0.1              84.0 ms    <span class="dim">┐</span>
+ 4  192.0.0.1             107.5 ms    <span class="dim">│ inside the ISP</span>
+ 5  192.0.0.1             113.7 ms    <span class="dim">│</span>
+ 6  192.0.0.1             112.8 ms    <span class="dim">┘</span>
+ 7  192.168.227.195        33.3 ms    <span class="dim">┐</span>
+ 8  172.28.64.230          49.7 ms    <span class="dim">│ deeper in</span>
+ 9  <span class="hl-c">* * *</span>                            <span class="dim">│ no reply</span>
+10  <span class="hl-c">* * *</span>                            <span class="dim">│ no reply</span>
+11  49.44.220.145          50.4 ms    <span class="dim">┘</span>
+12  104.20.23.154          31.4 ms    <span class="dim">← the server</span></pre>
+
+    <p>Twelve hops — exactly what the TTL arithmetic predicted, by a
+    completely different method.</p>
+
+    <h3 class="minor">Three ways this output is misread</h3>
+
+    <div class="reasons">
+      <div class="reason">
+        <b>Stars do not mean broken</b>
+        <p>Hops 9 and 10 stayed silent, yet 11 and 12 answered — so the
+        packet clearly passed through them. Many routers are deliberately
+        configured not to reply. If the last line reached the destination,
+        the path works.</p>
+      </div>
+      <div class="reason">
+        <b>Middle times are close to meaningless</b>
+        <p>Hop 5 reads 113 ms; the destination reads 31 ms. A router
+        forwards in hardware but generates complaints on a slow CPU at
+        lowest priority. That delay is politeness about your diagnostic, not
+        slowness in your traffic. <strong>Only the last line matters.</strong></p>
+      </div>
+      <div class="reason">
+        <b>There is no single route</b>
+        <p>Hop 7 answered from two different addresses. The three probes
+        took different parallel links. Packets in one conversation can take
+        different paths — which is exactly why yours arrived out of order
+        and needed <code>sack</code> to repair.</p>
+      </div>
+    </div>
+
+    <p>The ISP's own hops use private addresses — <code>192.168.227.195</code>,
+    <code>172.28.64.230</code> — the same kind as your
+    <code>172.26.1.224</code>. Routers in the middle do not need public
+    addresses; they only pass packets along. You will meet this pattern
+    again in cloud networks in Phase 8.</p>
+
+    <div class="verdict">
+      <p class="big">Everything from the first section, now measured.</p>
+      <p>"The message travels in short jumps" — twelve, listed by name. "No
+      machine knows the whole route" — your own routing table is two lines.
+      "Packets can take different routes" — hop 7. "Which is why they arrive
+      out of order" — <code>sack</code> in your capture. None of it was
+      metaphor.</p>
+    </div>
+  </section>
+
+  <section>
     <h2>Where the 299 milliseconds went</h2>
     <p class="sub">All 33 packets, drawn to scale. Each block is real elapsed
     time from your capture.</p>
@@ -882,6 +1157,94 @@ $ curl -4 https://example.com   <span class="dim">→ 200 OK</span></pre>
     ));
     key.appendChild(k);
   });
+
+  /* ---------- handshake stepper ----------
+     Steps through packets 7, 8 and 9 and shows what each side can be sure
+     of. The point of the exercise is step 2: the server still does not
+     know its own number arrived, which is why two packets is not enough. */
+  var HS_PKTS = [
+    { dir: "out", flag: "[S]",  say: "let's start. my number is 639031898" },
+    { dir: "in",  flag: "[S.]", say: "got your 639031898. mine is 3162034897" },
+    { dir: "out", flag: "[.]",  say: "got your 3162034897" }
+  ];
+
+  var HS_FACTS = [
+    "you know the server's number",
+    "you know the server received yours",
+    "the server knows your number",
+    "the server knows you received its number"
+  ];
+
+  /* knowledge after 0, 1, 2 and 3 packets */
+  var HS_STATE = [
+    [false, false, false, false],
+    [false, false, true,  false],
+    [true,  true,  true,  false],
+    [true,  true,  true,  true ]
+  ];
+
+  var HS_NOTE = [
+    "Nothing has been sent. Neither side knows anything about the other.",
+    "The server has your number. You have learned nothing yet — you do not even know your packet arrived.",
+    "<b>Stop here.</b> You know everything, but the server still does not know whether its own number reached you. If it started sending data now and packet 8 had been lost, it would be talking to someone who never heard it. <b>This is why two packets is not enough.</b>",
+    "Both sides are now certain. Data can flow. Cost: one round trip — 36.5 ms on your machine — before a single useful byte moves."
+  ];
+
+  var hsStep = 0;
+  var hsTrack = document.getElementById("hstrack");
+  var hsKnow = document.getElementById("hsknow");
+  var hsNote = document.getElementById("hsnote");
+  var hsNext = document.getElementById("hsnext");
+  var hsPrev = document.getElementById("hsprev");
+
+  function hsRender() {
+    hsTrack.innerHTML = "";
+    HS_PKTS.forEach(function (pk, i) {
+      var row = document.createElement("div");
+      row.className = "hspkt " + pk.dir + (i >= hsStep ? " ghost" : "") +
+                      (pk.dir === "in" ? " r2l" : "");
+      var f = document.createElement("span");
+      f.className = "flag";
+      f.textContent = (pk.dir === "out" ? "──► " : "◄── ") + pk.flag;
+      var s = document.createElement("span");
+      s.className = "say";
+      s.textContent = pk.say;
+      row.appendChild(f);
+      row.appendChild(s);
+      hsTrack.appendChild(row);
+    });
+
+    hsKnow.innerHTML = "";
+    var head = document.createElement("div");
+    head.className = "krow head";
+    head.innerHTML = "<span>after " + hsStep + " packet" +
+                     (hsStep === 1 ? "" : "s") + ", is this certain?</span><span></span>";
+    hsKnow.appendChild(head);
+
+    HS_FACTS.forEach(function (fact, i) {
+      var known = HS_STATE[hsStep][i];
+      var row = document.createElement("div");
+      row.className = "krow " + (known ? "yes" : "no");
+      var t = document.createElement("span");
+      t.textContent = fact;
+      var m = document.createElement("span");
+      m.className = "mark";
+      m.textContent = known ? "yes" : "no";
+      row.appendChild(t);
+      row.appendChild(m);
+      hsKnow.appendChild(row);
+    });
+
+    hsNote.innerHTML = HS_NOTE[hsStep];
+    hsPrev.disabled = hsStep === 0;
+    hsNext.disabled = hsStep === 3;
+    hsNext.textContent = hsStep === 3 ? "Connection ready" : "Send next packet";
+  }
+
+  hsNext.addEventListener("click", function () { if (hsStep < 3) { hsStep++; hsRender(); } });
+  hsPrev.addEventListener("click", function () { if (hsStep > 0) { hsStep--; hsRender(); } });
+  document.getElementById("hsreset").addEventListener("click", function () { hsStep = 0; hsRender(); });
+  hsRender();
 
   var ticks = document.getElementById("tlticks");
   [0, 50, 100, 150, 200, 250, 299].forEach(function (ms) {

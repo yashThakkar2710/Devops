@@ -260,6 +260,142 @@ and `curl -6` fails while `curl -4` succeeds. The `fe80::` address on
 called **Happy Eyeballs**, and it is why an unfinished IPv6 transition has
 not broken the web.
 
+### 2.9 Packets 7–9: the three-way handshake
+
+```
+7  .371187  Out  172.26.1.224.47644 > 104.20.23.154.443  [S]   seq 639031898   length 0
+8  .407645  In   104.20.23.154.443 > 172.26.1.224.47644  [S.]  seq 3162034897  ack 639031899  length 0
+9  .407747  Out  172.26.1.224.47644 > 104.20.23.154.443  [.]   ack 1           length 0
+```
+
+Every one is `length 0`. Three packets, no content.
+
+**Why the name lookup needed none.** Lines 1–2 were a single question and
+a single answer. A page fetch is thousands of bytes across many packets
+where order matters and loss must be detected. The network provides none of
+that.
+
+| | name lookup | page fetch |
+|---|---|---|
+| size | one small question | many packets |
+| if lost | ask again | would have to restart |
+| order | meaningless | packet 7 must follow packet 6 |
+
+**Two agreements about what packets mean:**
+
+- **UDP** — fire and forget. No setup, no ordering, no retry. Lines 1–6.
+- **TCP** — set up first, number everything, confirm receipt, resend what
+  is lost. Costs a handshake. Lines 7 onward.
+
+**Flags.** In tcpdump the dot means ACK, so `[S.]` is SYN and ACK together.
+
+| Shown | Meaning |
+|---|---|
+| `[S]` | SYN — synchronize, "let's start" |
+| `[S.]` | SYN + ACK |
+| `[.]` | ACK — "got yours" |
+| `[P.]` | PUSH — actual content |
+| `[F.]` | FIN — "I'm finished" |
+| `[R]` | RST — "no, stop" |
+
+**Why exactly three.** Each side picks a random starting number. Both must
+end up knowing the other's number *and* knowing the other knows theirs.
+
+| After | You know their number | You know they got yours | They know your number | They know you got theirs |
+|---|---|---|---|---|
+| 0 packets | no | no | no | no |
+| 1 packet | no | no | **yes** | no |
+| 2 packets | **yes** | **yes** | yes | **no** ← |
+| 3 packets | yes | yes | yes | **yes** |
+
+Two is not enough: after packet 8 the server still does not know its own
+number arrived. If it sent data then and packet 8 had been lost, it would
+be talking to someone who never heard it.
+
+Four is unnecessary: packet 8 does two jobs at once, confirming your number
+while carrying its own. A number cannot be confirmed before it is sent, so
+**three is the minimum that works** — not a convention.
+
+**The numbers.** `ack 639031899` is `seq 639031898` plus one. An
+acknowledgement states **the next number expected**, not the last received.
+Neither side starts at zero, so that a stray packet from an old connection
+cannot be mistaken for part of a new one (plus a security reason — Phase
+3). Packet 9 shows `ack 1` because tcpdump switches to relative numbering
+after the handshake; `-S` shows the real values.
+
+### 2.10 RTT, jitter and TTL
+
+**RTT (round trip time)** — how long a packet takes to go and come back.
+Measurable two ways:
+
+```
+capture:  packet 7 → packet 8 = 36.5 ms
+ping:     rtt min/avg/max = 23.6/25.9/27.8 ms
+```
+
+| Target | Average RTT |
+|---|---|
+| `104.20.23.154` | 25.95 ms |
+| `1.1.1.1` | 25.91 ms |
+| `127.0.0.1` | 0.043 ms (~600× faster) |
+
+Pinging yourself is not free. The kernel still builds, delivers and
+answers the packet. "It's local so it costs nothing" is false.
+
+RTT is dominated by distance: light in fibre covers ~200,000 km/s, and each
+router pauses to look. London–Sydney round trip is ~85 ms even at light
+speed. **RTT cannot be reduced. Only the number of round trips can.**
+
+**Jitter** — the variation. `1.1.1.1` ranged 18.3–32.8 ms in five seconds.
+The cause is queuing behind other traffic. `ping` reports it as `mdev`.
+Irrelevant for a page; for a voice call jitter is worse than latency.
+
+**TTL** — a counter in every packet, usually starting at 64. Each router
+subtracts one; at zero the packet is destroyed. Without it, a routing loop
+would circulate packets forever. Replies arrived with `ttl=52`, so
+`64 − 52 = 12` routers stood in between. Loopback replies still read 64.
+
+### 2.11 traceroute: the twelve hops, named
+
+`traceroute` abuses TTL deliberately — TTL 1 makes the first router destroy
+the packet and complain, revealing itself; TTL 2 reveals the second, and so
+on. (Written from scratch in Phase 2.)
+
+```
+ 1  172.26.0.1              0.4 ms    inside the PC
+ 2  jiofiber.local.html    73.9 ms    the home router
+ 3  192.0.0.1              84.0 ms    ┐
+ 4  192.0.0.1             107.5 ms    │ inside the ISP
+ 5  192.0.0.1             113.7 ms    │
+ 6  192.0.0.1             112.8 ms    ┘
+ 7  192.168.227.195        33.3 ms    ┐
+ 8  172.28.64.230          49.7 ms    │ deeper in
+ 9  * * *                             │ no reply
+10  * * *                             │ no reply
+11  49.44.220.145          50.4 ms    ┘
+12  104.20.23.154          31.4 ms    the server
+```
+
+Twelve hops — matching the TTL arithmetic by an entirely different method.
+
+**Three ways this output is misread:**
+
+1. **Stars do not mean broken.** Hops 9 and 10 stayed silent while 11 and
+   12 answered, so the packet clearly passed through them. Many routers are
+   deliberately configured not to reply. If the last line reached the
+   destination, the path works.
+2. **Middle times are close to meaningless.** Hop 5 reads 113 ms while the
+   destination reads 31 ms. Routers forward in hardware but generate ICMP
+   complaints on a slow CPU at lowest priority. Only the last line matters.
+   Large amounts of diagnostic time are wasted on exactly this.
+3. **There is no single route.** Hop 7 answered from two addresses — the
+   three probes took different parallel links. This is the cause of the
+   out-of-order arrival that `sack` repaired later in the same capture.
+
+The ISP's internal hops use private addresses, the same kind as
+`172.26.1.224`. Transit routers need no public address. The same pattern
+reappears in cloud networks in Phase 8.
+
 ## 3. The lab
 
 `labs/phase-0-map/00-01-first-capture/` records one real HTTPS request and
