@@ -7,8 +7,8 @@
 
   var STORE = "netcurriculum.progress";
   var THEME = "netcurriculum.theme";
-  /* Phase ids that have a page built. Add an id here when its page ships. */
-  var BUILT = [];
+  /* Day ids with a page built. Add an id here when its page ships. */
+  var BUILT_DAYS = ["01-01"];
   var phasesEl = document.getElementById("phases");
   var searchEl = document.getElementById("search");
   var emptyEl = document.getElementById("empty");
@@ -58,14 +58,11 @@
 
       /* Per-phase pages are built as each phase begins. Listed explicitly
          so an unbuilt phase shows a note instead of linking to a 404. */
-      var viz;
-      if (BUILT.indexOf(phase.id) !== -1) {
-        viz = el("a", "viz-link", "open page");
-        viz.href = "phase-" + phase.id.toLowerCase() + ".html";
-        viz.addEventListener("click", function (e) { e.stopPropagation(); });
-      } else {
-        viz = el("span", "viz-soon", "page not built yet");
-      }
+      var built = phase.modules.filter(function (m) {
+        return BUILT_DAYS.indexOf(m.id) !== -1;
+      }).length;
+      var viz = el("span", "viz-soon",
+        built + " of " + phase.modules.length + " pages");
 
       meta.appendChild(viz);
       meta.appendChild(count);
@@ -93,6 +90,17 @@
         label.htmlFor = box.id;
         label.appendChild(el("span", "mod-id", mod.id));
         label.appendChild(el("span", "mod-title", mod.title));
+
+        /* A day with a page built gets a link to it. */
+        if (BUILT_DAYS.indexOf(mod.id) !== -1) {
+          var link = el("a", "viz-link", "open");
+          link.href = "day-" + mod.id.split("-")[1] + ".html";
+          row.appendChild(box);
+          row.appendChild(label);
+          row.appendChild(link);
+          list.appendChild(row);
+          return;
+        }
 
         row.appendChild(box);
         row.appendChild(label);

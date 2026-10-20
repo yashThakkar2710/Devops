@@ -50,13 +50,20 @@ These are corrections I have already given. They hold.
 
 ## How a day runs
 
+0. **Revise — 30 min, before anything new.** Answer yesterday's recall
+   questions from memory, then check against yesterday's page. Taken from
+   the day's budget, not added to it.
 1. **Concept** — what problem the service solves, before any clicking. 20–30 min.
 2. **Build** — console first to understand, CLI second to repeat. Most of the time.
 3. **Break** — remove a permission, kill an instance, block a port. Read the error.
 4. **Tear down** — same day, without exception.
-5. **Record** — notes to `docs/week-N-*/`, commands to
-   `reference/cheatsheets/`, questions to `recall/`, tick `PROGRESS.md`,
-   commit and push, update this file.
+5. **Record** — notes to `docs/week-N-*/`, **a page at `site/day-NN.html`**,
+   commands to `reference/cheatsheets/`, questions to `recall/`, tick
+   `PROGRESS.md`, commit and push, update this file.
+
+**One page per day, not per week** (changed on day 1): weekly pages arrive
+too late to revise from. Add the day id to `BUILT_DAYS` in
+`site/assets/site.js` so the dashboard links it.
 
 Video is welcome as a *second* explanation after building, never instead.
 
@@ -101,6 +108,7 @@ Free tier is not free. NAT Gateway ~$32/month, ALB ~$16/month if left running.
 |---|---|
 | `PROGRESS.md` | The 30-day checklist. Generated — tick boxes by hand, they survive. |
 | `site/plan.html` | The plan: every day, every service, cost per day. |
+| `site/day-NN.html` | One page per day — what revision is checked against. |
 | `site/index.html` | Progress dashboard. |
 | `docs/week-N-*/` | Day notes. **Source of truth.** |
 | `docs/phase-0-map/` | Parked networking work. Intact. |

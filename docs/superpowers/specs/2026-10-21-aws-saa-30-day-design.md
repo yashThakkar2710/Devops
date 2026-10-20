@@ -28,6 +28,11 @@ Success is being able to **choose and justify an architecture** — not recall s
 | 8 weekend days × 5h | 40 |
 | **Total** | **~100** |
 
+Each day opens with **30 minutes of revision** of the previous day, taken
+from within that budget rather than added to it. Revision makes new material
+land faster, so the trade is net positive — and without it, week 1 is
+forgotten by week 4, which is exactly when it is needed.
+
 Below ~80 hours this does not work from a near-zero start. The plan is costed at 99 hours.
 
 **Split: 60% building, 25% concepts, 15% practice questions.** Practice questions are deliberately confined to week 4 — doing them earlier tests recall of material not yet built.
@@ -120,11 +125,16 @@ Free tier is not free. The standard learner bill:
 
 ## 8. Method per day
 
-1. **Concept first** — what problem the service solves, before any clicking. 20–30 min.
+0. **Revise — 30 minutes, before anything new.** Answer yesterday's recall
+   questions from memory, then check against yesterday's page. A question
+   answerable only by re-reading has not been learned; mark it and return to
+   it the next day too. This is the single highest-return habit in the plan:
+   recall produces retention, re-reading produces recognition.
+1. **Concept** — what problem the service solves, before any clicking. 20–30 min.
 2. **Build it** — console first for understanding, CLI second for repeatability. The majority of the time.
 3. **Break it** — remove a permission, kill an instance, block a port. Read the error. This is where the understanding forms.
 4. **Tear it down** — same day, without exception.
-5. **Record** — notes to `docs/`, commands to `reference/cheatsheets/`, questions to `recall/`.
+5. **Record** — notes to `docs/`, commands to `reference/cheatsheets/`, questions to `recall/`, and the day's page in `site/`.
 
 Supplementary video is welcome as a *second* explanation after building, never as a replacement for it.
 
@@ -148,7 +158,7 @@ The 83-module plan may be resumed after the exam decision. Its spec remains at `
 ## 10. Deliverables
 
 - One markdown note per day in `docs/week-N-*/`.
-- One HTML page per week in `site/`, consistent with the existing Phase 0 page.
+- **One HTML page per day** in `site/day-NN.html`, built the same day, so revision has something to check against. (Originally planned per week; changed on day 1 — weekly pages arrive too late to revise from.)
 - Cheatsheets grown per day in `reference/cheatsheets/`, commands only after use.
 - Recall questions per week in `recall/`.
 - `PROGRESS.md` regenerated from this spec.

@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 1 · Account safety and IAM</title>
+<link rel="stylesheet" href="assets/site.css">
+<style>
+  :root {
+    --root-c: #f85149;
+    --user-c: #3fb950;
+    --warn:   #f0883e;
+    --cool:   #a371f7;
+  }
+  :root[data-theme="light"] {
+    --root-c: #cf222e;
+    --user-c: #1a7f37;
+    --warn:   #bc4c00;
+    --cool:   #8250df;
+  }
+
+  .crumb { padding: 20px 0 0; font-size: 13px; }
+  .crumb a { color: var(--accent); text-decoration: none; }
+  .crumb a:hover { text-decoration: underline; }
+
+  .lede { padding: 20px 0 8px; max-width: 66ch; }
+  .lede .eyebrow { font-family: var(--mono); font-size: 12px; color: var(--ink-faint); margin: 0 0 6px; }
+  .lede h1 { margin: 0 0 10px; font-size: 27px; letter-spacing: -.02em; }
+  .lede p { margin: 0; color: var(--ink-dim); }
+
+  section { padding: 32px 0; border-top: 1px solid var(--line); }
+  section > h2 { margin: 0 0 6px; font-size: 18px; letter-spacing: -.01em; }
+  section > .sub { margin: 0 0 20px; color: var(--ink-dim); font-size: 14px; max-width: 66ch; }
+  h3.minor { margin: 26px 0 10px; font-size: 15px; }
+  p { max-width: 66ch; }
+
+  pre.box {
+    font-family: var(--mono); font-size: 12.5px; line-height: 1.65;
+    background: var(--panel-2); border: 1px solid var(--line-soft);
+    border-radius: 7px; padding: 13px; margin: 14px 0;
+    overflow-x: auto; color: var(--ink-dim);
+  }
+  pre.box .dim { color: var(--ink-faint); }
+  pre.box .bad { color: var(--root-c); }
+  pre.box .good { color: var(--user-c); }
+  pre.box .hi { color: var(--warn); }
+
+  /* root vs user */
+  .vs { display: grid; grid-template-columns: repeat(auto-fit, minmax(265px, 1fr)); gap: 14px; margin: 18px 0; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; }
+  .card.root { border-color: color-mix(in srgb, var(--root-c) 45%, var(--line)); }
+  .card.user { border-color: color-mix(in srgb, var(--user-c) 45%, var(--line)); }
+  .card h4 { margin: 0 0 3px; font-size: 15px; font-family: var(--mono); }
+  .card.root h4 { color: var(--root-c); }
+  .card.user h4 { color: var(--user-c); }
+  .card .when { margin: 0 0 12px; font-size: 12.5px; color: var(--ink-faint); }
+  .card ul { margin: 0; padding-left: 17px; font-size: 13.5px; color: var(--ink-dim); }
+  .card li { margin-bottom: 5px; }
+  .card li:last-child { margin-bottom: 0; }
+
+  /* ARN decoder */
+  .arnbox { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px 18px; }
+  .arnline {
+    font-family: var(--mono); font-size: clamp(13px, 2vw, 18px);
+    display: flex; flex-wrap: wrap; align-items: baseline; line-height: 2.3;
+  }
+  .aseg {
+    cursor: pointer; border: 0; background: transparent; font: inherit;
+    color: var(--c); padding: 2px 4px; border-bottom: 2px solid var(--c);
+    border-radius: 3px 3px 0 0;
+  }
+  .aseg:hover, .aseg:focus-visible { background: color-mix(in srgb, var(--c) 18%, transparent); }
+  .aseg[aria-pressed="true"] { background: color-mix(in srgb, var(--c) 28%, transparent); }
+  .aseg:focus-visible { outline: 2px solid var(--c); outline-offset: 1px; }
+  .acolon { color: var(--ink-faint); font-family: var(--mono); padding: 0 1px; }
+  .aout { margin-top: 18px; border-left: 3px solid var(--c, var(--line)); padding-left: 15px; min-height: 62px; }
+  .aout b { display: block; margin-bottom: 4px; color: var(--c, var(--ink)); }
+  .aout span { font-size: 13.5px; color: var(--ink-dim); }
+
+  /* region demo */
+  .regions { display: grid; gap: 12px; }
+  .rtabs { display: flex; gap: 8px; flex-wrap: wrap; }
+  .rtab {
+    font: inherit; font-size: 13px; padding: 7px 13px; cursor: pointer;
+    background: var(--panel-2); color: var(--ink-dim);
+    border: 1px solid var(--line); border-radius: 7px;
+  }
+  .rtab[aria-pressed="true"] { background: color-mix(in srgb, var(--accent) 18%, transparent); border-color: color-mix(in srgb, var(--accent) 50%, transparent); color: var(--accent); }
+  .rtab:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .rscreen {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: var(--radius); overflow: hidden;
+  }
+  .rbar {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 9px 14px; border-bottom: 1px solid var(--line);
+    font-family: var(--mono); font-size: 12px; color: var(--ink-faint);
+  }
+  .rbody { padding: 22px 16px; min-height: 108px; display: grid; align-content: center; gap: 9px; }
+  .rrow { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; font-size: 13.5px; }
+  .rrow code { color: var(--ink); }
+  .rstate { font-family: var(--mono); font-size: 11.5px; }
+  .rempty { text-align: center; color: var(--ink-faint); font-size: 13.5px; }
+  .rempty b { display: block; color: var(--root-c); font-family: var(--mono); margin-bottom: 5px; }
+  .rnote { margin: 0; font-size: 13px; color: var(--ink-dim); }
+
+  .callout {
+    margin: 18px 0; padding: 15px 17px; border-radius: var(--radius);
+    background: color-mix(in srgb, var(--warn) 10%, var(--panel));
+    border: 1px solid color-mix(in srgb, var(--warn) 38%, var(--line));
+  }
+  .callout p { margin: 0; }
+  .callout .big { font-size: 15.5px; font-weight: 600; margin-bottom: 4px; }
+
+  .done { border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+  .drow { display: grid; grid-template-columns: 3ch 1fr; gap: 12px; padding: 9px 14px; font-size: 13.5px; border-bottom: 1px solid var(--line-soft); }
+  .drow:last-child { border-bottom: 0; }
+  .drow span:first-child { color: var(--user-c); }
+
+  .vocab { display: grid; }
+  .vrow { display: grid; grid-template-columns: 17ch 1fr; gap: 16px; padding: 10px 0; border-bottom: 1px solid var(--line-soft); }
+  .vrow:last-child { border-bottom: 0; }
+  .vrow dt { font-size: 13.5px; color: var(--accent); font-family: var(--mono); }
+  .vrow dd { margin: 0; font-size: 13.5px; color: var(--ink-dim); }
+
+  ol.qs { margin: 0; padding-left: 20px; }
+  ol.qs li { margin-bottom: 11px; font-size: 14px; max-width: 64ch; }
+
+  .foot { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+    border-top: 1px solid var(--line); padding-top: 16px; padding-bottom: 34px;
+    font-size: 12px; color: var(--ink-faint); }
+
+  @media (max-width: 620px) {
+    .vrow { grid-template-columns: 1fr; gap: 2px; }
+    .rrow { grid-template-columns: 1fr; gap: 3px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <div class="brand"><span class="brand-mark">//</span><span>AWS in 30 days</span></div>
+    <div class="topbar-tools"><button id="theme" type="button" title="Toggle theme">◐</button></div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <p class="crumb"><a href="index.html">← Progress</a> · <a href="plan.html">The plan</a></p>
+
+  <div class="lede">
+    <p class="eyebrow">Week 1 · Day 1 · 01-01</p>
+    <h1>Account safety and the IAM model</h1>
+    <p>Everything here was done on your own account. The job of day 1 is to
+    make the root user useless to an attacker, and to create a second
+    identity for daily work that <em>can</em> be restricted.</p>
+  </div>
+
+  <section>
+    <h2>Root is the problem</h2>
+    <p class="sub">An AWS account begins with exactly one identity, created
+    from the email you signed up with.</p>
+
+    <div class="vs">
+      <div class="card root">
+        <h4>root</h4>
+        <p class="when">use 1–2 times a year</p>
+        <ul>
+          <li>Can do <strong>anything</strong></li>
+          <li>Can change billing details</li>
+          <li>Can <strong>close the account permanently</strong></li>
+          <li><strong>No policy can restrict it</strong></li>
+        </ul>
+      </div>
+      <div class="card user">
+        <h4>yash-admin</h4>
+        <p class="when">use every day</p>
+        <ul>
+          <li>Limited by policy</li>
+          <li>Can be restricted at any time</li>
+          <li>Cannot close the account</li>
+          <li>Can be deleted in 5 seconds if leaked</li>
+        </ul>
+      </div>
+    </div>
+
+    <p>Both are logins to the <strong>same account</strong>. They are
+    different identities, not different accounts. That separation is the
+    whole point of IAM: <em>who are you</em> and <em>what may you do</em> are
+    two different questions.</p>
+
+    <p>If root credentials leak you do not lose some data — you lose the
+    account, including the ability to get back into it.</p>
+
+    <h3 class="minor">Why can root not be restricted?</h3>
+    <p>Because something must be able to recover the account when everything
+    else is misconfigured. If a policy could lock root out, one bad policy
+    could make an account permanently unusable with no way back. Root is the
+    escape hatch — and an escape hatch with a lock on it is not an escape
+    hatch.</p>
+  </section>
+
+  <section>
+    <h2>Access keys: a password for code</h2>
+    <p class="sub">MFA guards a human at a sign-in page. Programs cannot type
+    passwords, so AWS has a second kind of credential.</p>
+
+    <pre class="box">Access key ID:      AKIA...
+Secret access key:  wJalr...</pre>
+
+    <p>Anything holding that pair <strong>is</strong> that identity. No
+    browser, no phone, no prompt. <strong>MFA does not protect it</strong>,
+    because MFA only guards the sign-in page — and an access key never goes
+    near one.</p>
+
+    <div class="callout">
+      <p class="big">Root must never have access keys. Ever.</p>
+      <p>There is no valid reason for one to exist. Bots scan public commits
+      for these strings and find them within seconds. This is the single
+      most common way AWS accounts are compromised — not password guessing,
+      a key pasted somewhere public.</p>
+    </div>
+
+    <pre class="box">checked on this account:
+  root        <span class="good">0 access keys</span>
+  yash-admin  <span class="good">0 access keys</span></pre>
+
+    <p>Confirmed by looking, not assumed. That distinction matters more in
+    security than anywhere else.</p>
+  </section>
+
+  <section>
+    <h2>Read an ARN</h2>
+    <p class="sub">Every single thing in AWS has an Amazon Resource Name.
+    Click any part.</p>
+
+    <div class="arnbox">
+      <div class="arnline" id="arnline"></div>
+      <div class="aout" id="aout">
+        <b>Pick a piece</b>
+        <span>Click any coloured part of the ARN above.</span>
+      </div>
+    </div>
+
+    <p style="margin-top:16px">The empty slot where a region would go is
+    meaningful, not a formatting quirk — <strong>IAM is global</strong>.
+    Compare an S3 or EC2 ARN and a region appears. You will meet ARNs
+    constantly: policies reference them, errors quote them, the CLI prints
+    them.</p>
+  </section>
+
+  <section>
+    <h2>Regions: where things live, and vanish</h2>
+    <p class="sub">AWS is split into regions — separate physical locations,
+    each with its own datacenters. Switch the console below.</p>
+
+    <div class="regions">
+      <div class="rtabs" id="rtabs"></div>
+      <div class="rscreen">
+        <div class="rbar">
+          <span>EC2 · Instances</span>
+          <span id="rlabel">—</span>
+        </div>
+        <div class="rbody" id="rbody"></div>
+      </div>
+      <p class="rnote" id="rnote"></p>
+    </div>
+
+    <div class="callout">
+      <p class="big">The instance never stopped. You just stopped seeing it.</p>
+      <p>It is still running and still billing. This is the most common and
+      most expensive beginner mistake in AWS — resources abandoned in a
+      region nobody looks at, charging for months.</p>
+    </div>
+
+    <h3 class="minor">The same trap, a second shape</h3>
+    <p><strong>CloudTrail Event history is per-region too.</strong> Your
+    <code>CreateUser</code> event did not appear in Mumbai, because
+    <strong>IAM is global and logs to <code>us-east-1</code></strong>.</p>
+
+    <pre class="box">you were viewing:  ap-south-1  <span class="dim">(Mumbai)</span>
+IAM logs to:       us-east-1   <span class="dim">(N. Virginia)</span></pre>
+
+    <p>"I can't find it" almost always means "wrong region". Chosen for this
+    account: <strong><code>ap-south-1</code></strong> — nearest to you, and
+    keeping everything in one region means nothing gets abandoned somewhere
+    forgotten.</p>
+  </section>
+
+  <section>
+    <h2>A budget is a smoke alarm, not a sprinkler</h2>
+    <p class="sub">The most important thing to understand about AWS and
+    money.</p>
+
+    <pre class="box">budget at $5  →  you spend $5  →  <span class="good">AWS emails you</span>
+                               →  <span class="bad">AWS keeps charging</span>
+                               →  <span class="bad">nothing is stopped</span></pre>
+
+    <p><strong>AWS will never cut off your services for cost.</strong> It
+    cannot distinguish a student whose account was compromised from a
+    company having its busiest day of the year. Stopping the second would be
+    far more damaging than the bill, so AWS alerts and never enforces.</p>
+
+    <p>Billing data also lags up to <strong>24 hours</strong>, so the alert
+    describes yesterday.</p>
+
+    <h3 class="minor">So what actually protects you?</h3>
+    <div class="done">
+      <div class="drow"><span>✗</span><span>Budget alert — tells you, slowly</span></div>
+      <div class="drow"><span>✓</span><span><strong>Tearing down every lab the same day</strong> — the real protection</span></div>
+      <div class="drow"><span>✓</span><span>Checking billing weekly — catches what you forgot</span></div>
+      <div class="drow"><span>✓</span><span>No access keys anywhere — closes the usual attack</span></div>
+      <div class="drow"><span>✓</span><span><strong>Budget actions</strong> — the real circuit breaker · day 2</span></div>
+    </div>
+
+    <p style="margin-top:16px">A <em>zero-spend</em> budget was chosen over a
+    $5 monthly one: with $100 of credits a $5 threshold would never fire — a
+    smoke alarm with the battery out. Zero-spend alerts on any charge above
+    $0.01, the moment something starts costing rather than a week later.</p>
+  </section>
+
+  <section>
+    <h2>Two switches that surprise everyone</h2>
+
+    <h3 class="minor">Billing is a separate permission</h3>
+    <p>A full administrator gets <em>access denied</em> on billing pages
+    unless a separate switch is on. The reasoning is sound: a company may
+    want twenty engineers with wide infrastructure permissions and
+    <strong>none</strong> of them seeing invoices or card details. Admin over
+    resources is not the same trust as seeing the bill.</p>
+    <p>On this account it was already active — newer accounts often ship that
+    way. Confirmed by <em>testing the behaviour</em> rather than hunting for
+    the setting, which is the faster move whenever a console menu has moved.</p>
+
+    <h3 class="minor">MFA needs a spare</h3>
+    <p>AWS allows up to <strong>8 MFA devices</strong> per identity, and any
+    one of them signs you in. Two were registered on root: the authenticator
+    app on the phone, and a passkey on the laptop.</p>
+    <pre class="box">phone dies  →  <span class="good">laptop passkey still works</span>
+laptop dies →  <span class="good">phone app still works</span></pre>
+    <p>A passkey cannot be phished. A fake AWS page can ask for a 6-digit
+    code and you might type it; a passkey is cryptographically bound to the
+    real domain and simply refuses to work anywhere else.</p>
+    <p>This trade-off repeats everywhere in security and in AWS: strong
+    protection makes lockout easier, and the answer is never weaker security
+    — it is <strong>more than one way in, each one strong</strong>. You will
+    meet the same shape again on day 14, deliberately killing an
+    availability zone.</p>
+  </section>
+
+  <section>
+    <h2>What exists now</h2>
+    <div class="done">
+      <div class="drow"><span>✓</span><span>MFA on root — authenticator app <em>and</em> laptop passkey</span></div>
+      <div class="drow"><span>✓</span><span>Root has zero access keys — confirmed, not assumed</span></div>
+      <div class="drow"><span>✓</span><span>Registration complete · $100 credits · 183 days</span></div>
+      <div class="drow"><span>✓</span><span><code>zero-spend-alert</code> budget with email notification</span></div>
+      <div class="drow"><span>✓</span><span>IAM user <code>yash-admin</code> in group <code>Admins</code></span></div>
+      <div class="drow"><span>✓</span><span>MFA on <code>yash-admin</code></span></div>
+      <div class="drow"><span>✓</span><span>Billing access confirmed working as the IAM user</span></div>
+      <div class="drow"><span>✓</span><span>Region fixed to <code>ap-south-1</code></span></div>
+      <div class="drow"><span>✓</span><span>CloudTrail event history reviewed — on by default, 90 days, free</span></div>
+    </div>
+    <p style="margin-top:16px">No CloudTrail <em>trail</em> was created. Event
+    history is already on and free; a trail writes to S3 and costs storage
+    that is not needed yet.</p>
+  </section>
+
+  <section>
+    <h2>Words you now own</h2>
+    <dl class="vocab">
+      <div class="vrow"><dt>root</dt><dd>The original account identity. Unlimited, unrestrictable, barely used.</dd></div>
+      <div class="vrow"><dt>IAM user</dt><dd>A second login to the same account that can be limited.</dd></div>
+      <div class="vrow"><dt>group</dt><dd>A container of users sharing permissions. Change once, everyone updates.</dd></div>
+      <div class="vrow"><dt>policy</dt><dd>The document stating what is allowed or denied.</dd></div>
+      <div class="vrow"><dt>access key</dt><dd>A password for code. No MFA protects it.</dd></div>
+      <div class="vrow"><dt>MFA</dt><dd>A second factor at sign-in. Up to 8 devices, any one works.</dd></div>
+      <div class="vrow"><dt>passkey</dt><dd>Device-bound MFA that cannot be phished.</dd></div>
+      <div class="vrow"><dt>region</dt><dd>A physical location. Resources exist in exactly one, visible only from there.</dd></div>
+      <div class="vrow"><dt>ARN</dt><dd>The unique address of any AWS resource.</dd></div>
+      <div class="vrow"><dt>CloudTrail</dt><dd>A recording of who did what. Per-region; global services log to us-east-1.</dd></div>
+      <div class="vrow"><dt>budget</dt><dd>A cost alert. Never stops spending on its own.</dd></div>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Test yourself</h2>
+    <p class="sub">Answer before looking anything up. A question you can only
+    answer by re-reading is one you have not learned yet.</p>
+    <ol class="qs">
+      <li>Root cannot be restricted by any policy. Why would AWS design it that way, rather than letting you lock it down?</li>
+      <li>You have MFA on root. Someone obtains a root <strong>access key</strong>. Are you protected? Explain precisely why or why not.</li>
+      <li>Your budget is $5. You spend $40 overnight. What does AWS do?</li>
+      <li>Given that, what actually protects you from a large bill?</li>
+      <li>You are a full administrator but the billing page says access denied. What is going on, and why does AWS separate these?</li>
+      <li>You launch an instance in Mumbai. Tomorrow the console shows none. Give two explanations and say how you would tell them apart.</li>
+      <li>You created an IAM user 20 minutes ago, but CloudTrail in Mumbai does not show it. Why not?</li>
+      <li>Read this and say what it is and where it lives — and why one field is empty:<br><code>arn:aws:iam::639679388494:user/yash-admin</code></li>
+      <li>You are the only person on this account. Why put yourself in a group rather than attaching the policy directly?</li>
+      <li>Why a zero-spend budget here instead of a $5 monthly budget?</li>
+      <li><code>AdministratorAccess</code> is close to root power. Name two things it still cannot do — and why that matters.</li>
+      <li>Your authenticator app entry is deleted by accident. Walk through getting back in, for <code>yash-admin</code> and then for root.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>Carried forward</h2>
+    <dl class="vocab">
+      <div class="vrow"><dt>default VPC</dt><dd>AWS created one automatically — seen in CloudTrail as <code>AutomatedDefaultVpcCreation</code>. Day 3 ignores it and builds one from nothing.</dd></div>
+      <div class="vrow"><dt>AdministratorAccess</dt><dd>Not least-privilege. Day 2 writes a narrow policy by hand.</dd></div>
+      <div class="vrow"><dt>roles</dt><dd>The fourth IAM concept, and the one most people never really get. Day 2.</dd></div>
+      <div class="vrow"><dt>budget actions</dt><dd>The circuit breaker a budget alert is not. Day 2.</dd></div>
+      <div class="vrow"><dt>MFA enforcement</dt><dd>A policy making MFA compulsory account-wide. Day 2.</dd></div>
+      <div class="vrow"><dt>Cost Explorer</dt><dd>Forecast showed access denied — needs up to 24h to activate. Recheck.</dd></div>
+    </dl>
+  </section>
+
+</main>
+
+<footer class="wrap foot">
+  <span>Day 1 of 30 · notes in <code>docs/week-1-foundations/</code></span>
+  <span class="muted"><a href="plan.html" style="color:inherit">The plan</a></span>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var THEME = "netcurriculum.theme";
+  try {
+    var saved = localStorage.getItem(THEME);
+    if (saved) document.documentElement.dataset.theme = saved;
+  } catch (e) { /* storage may be blocked; the page still works */ }
+  document.getElementById("theme").addEventListener("click", function () {
+    var next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+    document.documentElement.dataset.theme = next;
+    try { localStorage.setItem(THEME, next); } catch (e) { /* ignore */ }
+  });
+
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+
+  /* ---------- ARN decoder ---------- */
+  var ARN = [
+    { t: "arn", c: "#6e7681", title: "Always 'arn'",
+      body: "Every ARN starts the same way. It is how a tool knows the string it is looking at is a resource name and not a bucket name, an id, or a path." },
+    { t: "aws", c: "#a371f7", title: "The partition",
+      body: "Which AWS world this lives in. Nearly always 'aws'. Separate partitions exist for China and for US government regions, and they do not talk to each other." },
+    { t: "iam", c: "#4493f8", title: "The service",
+      body: "Which AWS service owns this thing. Here it is IAM. You will see s3, ec2, lambda, dynamodb and dozens more in the same slot." },
+    { t: "", c: "#f85149", title: "The region — deliberately empty",
+      body: "This is the interesting one. IAM is a global service: a user is not created in Mumbai or in Stockholm, it simply exists for the whole account. So there is no region to name. Compare an S3 or EC2 ARN and you will find ap-south-1 sitting here." },
+    { t: "639679388494", c: "#d29922", title: "The account id",
+      body: "Which AWS account owns the resource. Yours. Not a secret, but not something to post publicly either, since it is half of what someone needs to target you." },
+    { t: "user/yash-admin", c: "#3fb950", title: "The resource itself",
+      body: "Type and name. Here: a user called yash-admin. The format of this last part is up to each service, which is why some ARNs end in a path and others in an id." }
+  ];
+
+  var aline = document.getElementById("arnline");
+  var aout = document.getElementById("aout");
+  var acur = null;
+
+  ARN.forEach(function (part, i) {
+    if (i > 0) aline.appendChild(el("span", "acolon", ":"));
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "aseg";
+    b.style.setProperty("--c", part.c);
+    b.textContent = part.t === "" ? "  " : part.t;
+    b.setAttribute("aria-pressed", "false");
+    b.setAttribute("aria-label", part.title);
+    b.addEventListener("click", function () {
+      if (acur) acur.setAttribute("aria-pressed", "false");
+      acur = b;
+      b.setAttribute("aria-pressed", "true");
+      aout.style.setProperty("--c", part.c);
+      aout.innerHTML = "";
+      aout.appendChild(el("b", null, part.title));
+      aout.appendChild(el("span", null, part.body));
+    });
+    aline.appendChild(b);
+  });
+
+  /* ---------- region demo ----------
+     The instance exists only in ap-south-1. Switching the console does not
+     move or stop it; it only changes what you can see. */
+  var REGIONS = [
+    { id: "ap-south-1", name: "Asia Pacific (Mumbai)",
+      note: "Where you created it. The console shows it because you are looking at the right place." },
+    { id: "eu-north-1", name: "Europe (Stockholm)",
+      note: "Same account, same instance, same bill. A different region is a different set of datacenters, and they share nothing you can see from here." },
+    { id: "us-east-1", name: "US East (N. Virginia)",
+      note: "Also empty of instances — but this is where global services such as IAM write their CloudTrail events. That is why your CreateUser event was not in Mumbai." }
+  ];
+
+  var rtabs = document.getElementById("rtabs");
+  var rbody = document.getElementById("rbody");
+  var rlabel = document.getElementById("rlabel");
+  var rnote = document.getElementById("rnote");
+  var rcur = "ap-south-1";
+
+  function drawRegion() {
+    Array.prototype.forEach.call(rtabs.children, function (b) {
+      b.setAttribute("aria-pressed", b.dataset.id === rcur ? "true" : "false");
+    });
+    var reg = REGIONS.filter(function (r) { return r.id === rcur; })[0];
+    rlabel.textContent = reg.id;
+    rnote.textContent = reg.note;
+    rbody.innerHTML = "";
+
+    if (rcur === "ap-south-1") {
+      var row = el("div", "rrow");
+      row.appendChild(el("code", null, "i-0a1b2c3d"));
+      row.appendChild(el("span", null, "web-server · t3.micro"));
+      var st = el("span", "rstate", "running");
+      st.style.color = "var(--user-c)";
+      row.appendChild(st);
+      rbody.appendChild(row);
+    } else {
+      var e = el("div", "rempty");
+      e.appendChild(el("b", null, "No instances found"));
+      e.appendChild(document.createTextNode(
+        "The instance is still running in ap-south-1, and still billing."));
+      rbody.appendChild(e);
+    }
+  }
+
+  REGIONS.forEach(function (r) {
+    var b = el("button", "rtab", r.name);
+    b.type = "button";
+    b.dataset.id = r.id;
+    b.addEventListener("click", function () { rcur = r.id; drawRegion(); });
+    rtabs.appendChild(b);
+  });
+  drawRegion();
+})();
+</script>
+</body>
+</html>
