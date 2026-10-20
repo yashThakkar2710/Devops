@@ -2,430 +2,154 @@
 // Do not edit by hand. Inlined as a script because file:// blocks the Fetch API.
 window.CURRICULUM = [
   {
-    "id": "0",
-    "slug": "phase-0-map",
-    "title": "The Map",
-    "hours": 3,
-    "modules": [
-      {
-        "id": "00-01",
-        "title": "Journey of a request: lab setup, capture one HTTPS request end to end, name every layer, produce the map of ignorance."
-      }
-    ]
-  },
-  {
-    "id": "L1",
-    "slug": "phase-l1-linux-foundations",
-    "title": "Linux Working Knowledge",
-    "hours": 13,
-    "modules": [
-      {
-        "id": "L1-01",
-        "title": "Kernel vs userspace, syscalls, and /proc and /sys as interfaces"
-      },
-      {
-        "id": "L1-02",
-        "title": "Filesystem, paths, permissions, users, sudo"
-      },
-      {
-        "id": "L1-03",
-        "title": "Processes, signals, and file descriptors — \"everything is a file\""
-      },
-      {
-        "id": "L1-04",
-        "title": "The shell for real: pipes, redirection, exit codes, job control"
-      },
-      {
-        "id": "L1-05",
-        "title": "Packages, systemd services, logs and journald"
-      }
-    ]
-  },
-  {
     "id": "1",
-    "slug": "phase-1-link-layer",
-    "title": "Link Layer",
-    "hours": 18,
+    "slug": "week-1-foundations",
+    "title": "Foundations you cannot fake",
+    "hours": 23,
     "modules": [
       {
         "id": "01-01",
-        "title": "What a network is: links, nodes, addressing, and why layering"
+        "title": "Account safety and the IAM model: root lockdown, MFA, admin user, budget alarm, CloudTrail on. Build: secure the account end to end. Cost: $0"
       },
       {
         "id": "01-02",
-        "title": "Bits to frames: encoding, clocking, framing, Ethernet anatomy, FCS"
+        "title": "IAM in depth: identity vs resource policies, JSON anatomy, roles and trust, assume-role, policy evaluation order, permission boundaries. Build: hand-write a policy, attach a role to EC2, test with the CLI, break it deliberately and read the denial. Cost: $0"
       },
       {
         "id": "01-03",
-        "title": "MAC addressing: structure, OUI, unicast/multicast/broadcast; why L2 addressing exists when L3 addressing also exists"
+        "title": "VPC from scratch: CIDR choice, availability zones, subnets, route tables, internet gateway. A public subnet is only a route table entry. Build: a VPC with two public and two private subnets across two AZs, no wizard. Cost: $0"
       },
       {
         "id": "01-04",
-        "title": "Hubs to switches: collision vs broadcast domains, MAC learning, flooding, CAM tables"
+        "title": "VPC egress and boundaries: NAT gateway, security groups vs NACLs, VPC endpoints. Build: private-subnet egress through NAT, then an S3 gateway endpoint that removes the need for it. Cost: NAT ~$0.045/hr — delete same day"
       },
       {
         "id": "01-05",
-        "title": "ARP: the L2/L3 glue, cache behaviour, gratuitous and proxy ARP, spoofing, and the absence of authentication"
+        "title": "EC2: instance families, purchasing options, AMIs, user data, key pairs, EBS volume types and snapshots. Build: launch into your own VPC, install nginx via user data, attach and snapshot a volume, bake an AMI. Cost: t3.micro free tier"
       },
       {
         "id": "01-06",
-        "title": "VLANs and 802.1Q: tagging, access vs trunk, native VLAN"
+        "title": "S3: storage classes, lifecycle, versioning, bucket policy vs IAM, encryption options, static hosting, presigned URLs. Build: versioned bucket, lifecycle rule, static site, presigned URL, block public access. Cost: pennies"
       },
       {
         "id": "01-07",
-        "title": "STP: loops and broadcast storms, root election, port states, RSTP"
+        "title": "Week 1 build and review: a working web server in your own VPC reading from S3 via an instance role, with no access keys anywhere. Cost: small"
       }
     ]
   },
   {
     "id": "2",
-    "slug": "phase-2-network-layer",
-    "title": "Network Layer",
-    "hours": 28,
+    "slug": "week-2-resilient",
+    "title": "Resilient and scalable",
+    "hours": 23,
     "modules": [
       {
         "id": "02-01",
-        "title": "Why L3 exists: scaling past a broadcast domain, hierarchical addressing"
+        "title": "Load balancing: ALB vs NLB vs GWLB, listeners, target groups, health checks, path and host routing, stickiness, cross-zone. Build: ALB across two AZs, then terminate an instance and watch traffic move. Cost: ALB ~$0.0225/hr — delete same day"
       },
       {
         "id": "02-02",
-        "title": "IPv4 addressing and binary fluency"
+        "title": "Auto Scaling: launch templates, target tracking vs step vs scheduled, health check types, cooldowns, lifecycle hooks. Build: an ASG behind the ALB, load the CPU, watch it scale out and back in. Cost: small"
       },
       {
         "id": "02-03",
-        "title": "Subnetting, CIDR, VLSM — drilled to automaticity"
+        "title": "RDS: engines, Multi-AZ vs read replicas (the most-missed exam distinction), automated backups vs snapshots, subnet and parameter groups, encryption. Build: RDS in private subnets reachable only from the app tier; snapshot, restore, enable Multi-AZ. Cost: db.t3.micro free tier"
       },
       {
         "id": "02-04",
-        "title": "The IP header field by field: TTL, protocol, DSCP, flags"
+        "title": "DynamoDB: partition and sort keys, on-demand vs provisioned, GSI vs LSI, DAX, streams, TTL, global tables. Build: a table, then compare the cost of query vs scan on the same data. Cost: free tier"
       },
       {
         "id": "02-05",
-        "title": "The routing decision: longest prefix match, the Linux FIB, connected vs gateway routes"
+        "title": "Storage and caching: EBS gp3/io2/st1/sc1, EFS vs EBS, FSx (know), ElastiCache Redis vs Memcached, Storage Gateway (know). Build: one EFS filesystem mounted on two instances at once. Cost: small"
       },
       {
         "id": "02-06",
-        "title": "How routing tables get populated: static, IGP (OSPF concepts), EGP (BGP concepts) — groundwork for Phase 8"
+        "title": "DNS and edge: Route 53 record types, alias vs CNAME, routing policies (simple, weighted, latency, failover, geolocation, multivalue), health checks; CloudFront origins, behaviours, OAC, cache keys, invalidation; Global Accelerator (know). Build: CloudFront in front of a private S3 bucket using OAC. Cost: small"
       },
       {
         "id": "02-07",
-        "title": "MTU, fragmentation, PMTUD, and PMTUD black holes"
-      },
-      {
-        "id": "02-08",
-        "title": "ICMP and traceroute mechanics"
-      },
-      {
-        "id": "02-09",
-        "title": "NAT: SNAT/DNAT/masquerade, conntrack introduction, NAT traversal, hairpinning, CGNAT"
-      },
-      {
-        "id": "02-10",
-        "title": "IPv6: addressing, SLAAC, NDP, dual-stack operation"
+        "title": "Week 2 build: full three tier — CloudFront → ALB → ASG in private subnets → RDS Multi-AZ. Then remove an AZ and prove it survives. Cost: moderate — tear down fully"
       }
     ]
   },
   {
     "id": "3",
-    "slug": "phase-3-transport-layer",
-    "title": "Transport Layer",
-    "hours": 32,
+    "slug": "week-3-modern-secure",
+    "title": "Modern and secure",
+    "hours": 23,
     "modules": [
       {
         "id": "03-01",
-        "title": "Ports, sockets, the 5-tuple; what a socket is inside the kernel"
+        "title": "Lambda and API Gateway: execution model, cold starts, memory and timeout, environment variables, layers, VPC attachment, concurrency and reserved concurrency; REST vs HTTP APIs, integrations, authorizers. Build: an API Gateway endpoint fronting a Lambda that reads DynamoDB. Cost: free tier"
       },
       {
         "id": "03-02",
-        "title": "UDP: the minimal transport and when it is correct"
+        "title": "Messaging and events: SQS standard vs FIFO, visibility timeout, dead-letter queues, long polling; SNS fan-out; EventBridge buses and rules; Kinesis and Step Functions (know). Choosing between SQS, SNS, EventBridge and Kinesis is a recurring exam question. Build: SNS fanning out to two SQS queues feeding Lambdas; force a failure into the DLQ. Cost: free tier"
       },
       {
         "id": "03-03",
-        "title": "Connection establishment: the 3-way handshake and why three, ISN randomness, SYN queue vs accept queue, somaxconn, SYN flood and cookies"
+        "title": "Containers: ECR, ECS task definitions and services, Fargate vs EC2 launch type, EKS (know), and when a container beats a Lambda. Build: push an image to ECR and run it on Fargate behind the ALB. Cost: small — stop tasks same day"
       },
       {
         "id": "03-04",
-        "title": "Reliability: sequence numbers, cumulative ACK, SACK, RTO, fast retransmit"
+        "title": "Encryption and secrets: KMS key types, envelope encryption, key policies vs IAM, rotation; Secrets Manager vs Parameter Store; ACM issuance and validation. Build: a customer-managed key, encrypt a bucket and a volume, move the database password into Secrets Manager and read it from Lambda. Cost: KMS $1/key/month — delete after"
       },
       {
         "id": "03-05",
-        "title": "Flow control: sliding window, window scaling, zero window, silly window syndrome"
+        "title": "Security services: WAF rules and rate limiting, Shield Standard vs Advanced, GuardDuty, Inspector, Macie, Security Hub, Network Firewall (know). Which one detects, which one blocks, and where each sits. Build: a WAF rate-limit rule on the ALB, then trigger it deliberately. Cost: WAF ~$5/month — delete same day"
       },
       {
         "id": "03-06",
-        "title": "Congestion control I: why it exists, slow start, AIMD, Reno"
+        "title": "Observability: CloudWatch metrics, logs, alarms, dashboards and Log Insights; CloudTrail for audit; Config for compliance; X-Ray (know). Build: a custom metric, an alarm that emails via SNS, a Log Insights query, and one Config rule. Cost: small"
       },
       {
         "id": "03-07",
-        "title": "Congestion control II: CUBIC, BBR, bufferbloat, AQM and fq_codel"
-      },
-      {
-        "id": "03-08",
-        "title": "Teardown: FIN vs RST, the 11 states, TIME_WAIT, port exhaustion"
-      },
-      {
-        "id": "03-09",
-        "title": "Nagle, delayed ACK, TCP_NODELAY, and the 40 ms stall"
-      },
-      {
-        "id": "03-10",
-        "title": "TCP tuning and the latency budget: sysctls, where microseconds go"
+        "title": "Week 3 build and review: make the week 2 architecture event-driven and encrypted end to end. Cost: moderate — tear down"
       }
     ]
   },
   {
     "id": "4",
-    "slug": "phase-4-names-and-trust",
-    "title": "Names and Trust",
-    "hours": 24,
-    "modules": [
-      {
-        "id": "04-01",
-        "title": "DNS: why names, the hierarchy, zones and delegation"
-      },
-      {
-        "id": "04-02",
-        "title": "The resolution walk: stub, recursive, root, TLD, authoritative; iterative vs recursive"
-      },
-      {
-        "id": "04-03",
-        "title": "Record types and zone files: SOA, NS, A/AAAA, CNAME, MX, TXT, SRV, PTR"
-      },
-      {
-        "id": "04-04",
-        "title": "Caching, TTL, negative caching; why a change did not propagate"
-      },
-      {
-        "id": "04-05",
-        "title": "DNS in production: split-horizon, anycast roots, EDNS, DNSSEC, DoH/DoT, failure modes"
-      },
-      {
-        "id": "04-06",
-        "title": "TLS: the problem, symmetric vs asymmetric, the 1.2 handshake"
-      },
-      {
-        "id": "04-07",
-        "title": "TLS 1.3, certificates and chain of trust, SNI, ALPN, resumption, 0-RTT"
-      },
-      {
-        "id": "04-08",
-        "title": "PKI in practice: run your own CA, mTLS, rotation, pinning, error triage"
-      }
-    ]
-  },
-  {
-    "id": "5",
-    "slug": "phase-5-application-layer",
-    "title": "Application Layer",
-    "hours": 14,
-    "modules": [
-      {
-        "id": "05-01",
-        "title": "HTTP/1.1: anatomy, keep-alive, pipelining failure, head-of-line blocking"
-      },
-      {
-        "id": "05-02",
-        "title": "HTTP/2: framing, multiplexing, HPACK, and its own TCP-level HOL blocking"
-      },
-      {
-        "id": "05-03",
-        "title": "HTTP/3 and QUIC: why UDP, streams, connection migration, 0-RTT"
-      },
-      {
-        "id": "05-04",
-        "title": "WebSockets and gRPC"
-      },
-      {
-        "id": "05-05",
-        "title": "Proxies: forward vs reverse, CONNECT, X-Forwarded-For, PROXY protocol, TLS termination"
-      }
-    ]
-  },
-  {
-    "id": "L2",
-    "slug": "phase-l2-linux-internals",
-    "title": "Linux Systems Internals",
-    "hours": 26,
-    "modules": [
-      {
-        "id": "L2-01",
-        "title": "Syscalls under the microscope: strace, the cost of the userspace/kernel transition"
-      },
-      {
-        "id": "L2-02",
-        "title": "Process internals: fork/exec, scheduling, process states"
-      },
-      {
-        "id": "L2-03",
-        "title": "Memory: virtual memory, page cache, the OOM killer, why free is misleading"
-      },
-      {
-        "id": "L2-04",
-        "title": "cgroups: what a resource limit actually is, and why a container was OOM-killed"
-      },
-      {
-        "id": "L2-05",
-        "title": "Namespaces, all eight types — the isolation half of containers"
-      },
-      {
-        "id": "L2-06",
-        "title": "Storage, filesystems, and overlayfs — how a container image actually works"
-      },
-      {
-        "id": "L2-07",
-        "title": "systemd in depth: units, dependency ordering, socket activation"
-      },
-      {
-        "id": "L2-08",
-        "title": "Performance methodology: the USE method, vmstat/iostat/perf, flamegraphs"
-      }
-    ]
-  },
-  {
-    "id": "6",
-    "slug": "phase-6-linux-networking",
-    "title": "Linux Networking Internals",
+    "slug": "week-4-architect",
+    "title": "Architect decisions and exam shape",
     "hours": 30,
     "modules": [
       {
-        "id": "06-01",
-        "title": "The kernel datapath: NIC, ring buffers, IRQ/softirq, NAPI, sk_buff, delivery to socket"
+        "id": "04-01",
+        "title": "Cost architecture: on-demand, reserved instances, Savings Plans, Spot; S3 storage class economics; data transfer pricing, which is the cost nobody predicts; Cost Explorer, budgets, Trusted Advisor, tagging. Build: analyse your own month's spend and set up tag-based cost allocation. Cost: $0"
       },
       {
-        "id": "06-02",
-        "title": "iproute2 fluency: ip link/addr/route/neigh/rule"
+        "id": "04-02",
+        "title": "Resilience and disaster recovery: RTO and RPO defined properly, the four strategies (backup and restore, pilot light, warm standby, multi-site active-active) and their cost/recovery tradeoff, AWS Backup, cross-region replication. Build: a backup plan and cross-region S3 replication. Cost: small"
       },
       {
-        "id": "06-03",
-        "title": "Netfilter architecture: the five hooks, tables, chains, traversal order"
+        "id": "04-03",
+        "title": "Migration and hybrid: DMS, DataSync, the Snow family, Storage Gateway, Direct Connect, Site-to-Site VPN, Transit Gateway, PrivateLink, VPC peering. Mostly KNOW — the skill is matching tool to scenario. Build: peer two VPCs and route between them. Cost: $0"
       },
       {
-        "id": "06-04",
-        "title": "iptables in practice: filter/nat/mangle, rule anatomy, reading real rulesets written by other software"
+        "id": "04-04",
+        "title": "Multi-account and governance: Organizations, OUs, SCPs vs IAM policies, consolidated billing, Control Tower (know), IAM Identity Center, Resource Access Manager. Build: explore Organizations read-only; write an SCP on paper and predict its effect. Cost: $0"
       },
       {
-        "id": "06-05",
-        "title": "nftables"
+        "id": "04-05",
+        "title": "Decision tables: the \"which service\" comparisons the exam is built from — SQS vs SNS vs EventBridge vs Kinesis; ALB vs NLB; EBS vs EFS vs S3; RDS vs Aurora vs DynamoDB; Lambda vs Fargate vs EC2; Multi-AZ vs read replica vs multi-region. Build: write each table from memory, then check it. Cost: $0"
       },
       {
-        "id": "06-06",
-        "title": "Conntrack in depth: states, table sizing, timeouts, the NAT dependency, exhaustion and mid-stream failure modes"
+        "id": "04-06",
+        "title": "Practice exam 1, then review every question — including the ones answered correctly by guessing. Cost: $0"
       },
       {
-        "id": "06-07",
-        "title": "Namespaces, veth, bridge, macvlan, ipvlan — the container primitives"
+        "id": "04-07",
+        "title": "Gap filling from exam 1: rebuild or re-read only the areas that failed. Cost: varies"
       },
       {
-        "id": "06-08",
-        "title": "Policy routing, multiple tables, VRF concepts"
+        "id": "04-08",
+        "title": "Practice exam 2 and review. Cost: $0"
       },
       {
-        "id": "06-09",
-        "title": "tc and qdiscs: shaping, policing, netem, fq_codel"
-      },
-      {
-        "id": "06-10",
-        "title": "eBPF and XDP: the modern datapath"
-      }
-    ]
-  },
-  {
-    "id": "7",
-    "slug": "phase-7-container-kubernetes",
-    "title": "Container and Kubernetes Networking",
-    "hours": 22,
-    "modules": [
-      {
-        "id": "07-01",
-        "title": "Docker networking: bridge/host/none/macvlan and the iptables Docker writes"
-      },
-      {
-        "id": "07-02",
-        "title": "The Kubernetes network model: the flat pod network requirement and why"
-      },
-      {
-        "id": "07-03",
-        "title": "CNI: the specification, plugin invocation, flannel and VXLAN overlay"
-      },
-      {
-        "id": "07-04",
-        "title": "Calico (BGP-routed) vs Cilium (eBPF): trade-offs"
-      },
-      {
-        "id": "07-05",
-        "title": "Services and kube-proxy: ClusterIP as a DNAT rule, NodePort, LoadBalancer, iptables vs IPVS mode"
-      },
-      {
-        "id": "07-06",
-        "title": "CoreDNS, Ingress controllers, ExternalTrafficPolicy"
-      },
-      {
-        "id": "07-07",
-        "title": "NetworkPolicy and service mesh interception: sidecar iptables vs eBPF"
-      }
-    ]
-  },
-  {
-    "id": "8",
-    "slug": "phase-8-cloud-internet",
-    "title": "Cloud and Internet Scale",
-    "hours": 22,
-    "modules": [
-      {
-        "id": "08-01",
-        "title": "VPC internals: SDN, the mapping service, ENI as the real unit of networking, subnets and route tables"
-      },
-      {
-        "id": "08-02",
-        "title": "Gateways: IGW, NAT Gateway vs NAT instance (cost and throughput reality), egress-only, gateway vs interface endpoints and PrivateLink"
-      },
-      {
-        "id": "08-03",
-        "title": "Security groups (stateful, hypervisor-enforced) vs NACLs (stateless): why the asymmetry exists"
-      },
-      {
-        "id": "08-04",
-        "title": "Connecting VPCs and on-prem: peering, Transit Gateway, VPN, Direct Connect, overlapping CIDR pain"
-      },
-      {
-        "id": "08-05",
-        "title": "Load balancing: L4 vs L7, NLB/ALB internals, algorithms, health checks, connection draining, session affinity"
-      },
-      {
-        "id": "08-06",
-        "title": "DNS and traffic management at scale: routing policies, anycast, CDN and edge"
-      },
-      {
-        "id": "08-07",
-        "title": "BGP for real: AS numbers, eBGP/iBGP, path attributes, the path selection algorithm in order, peering vs transit"
-      },
-      {
-        "id": "08-08",
-        "title": "Internet failure modes: route leaks, hijacks, RPKI, outage case studies"
-      }
-    ]
-  },
-  {
-    "id": "9",
-    "slug": "phase-9-observability",
-    "title": "Observability and Capstone",
-    "hours": 15,
-    "modules": [
-      {
-        "id": "09-01",
-        "title": "A troubleshooting methodology: layer bisection, hypothesis-driven diagnosis, avoiding the guess-and-check trap"
-      },
-      {
-        "id": "09-02",
-        "title": "tcpdump and Wireshark mastery; BPF filter syntax from the ground up"
-      },
-      {
-        "id": "09-03",
-        "title": "The toolbox: ss, ip, nstat, conntrack, mtr, ethtool"
-      },
-      {
-        "id": "09-04",
-        "title": "Capstone: a set of deliberately broken environments diagnosed from symptoms with no hints, then a full re-trace of the Phase 0 request explaining every byte."
+        "id": "04-09",
+        "title": "Weak areas, final decision tables, practice exam 3, and the booking decision. Cost: $0"
       }
     ]
   }

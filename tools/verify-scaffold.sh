@@ -9,25 +9,26 @@ pass() { printf '  \033[32mok\033[0m   %s\n' "$1"; }
 fail() { printf '  \033[31mFAIL\033[0m %s\n' "$1"; FAIL=1; }
 section() { printf '\n\033[1m%s\033[0m\n' "$1"; }
 
+# Active curriculum: the 30-day AWS plan.
 SLUGS=(
-  phase-0-map
-  phase-l1-linux-foundations
-  phase-1-link-layer
-  phase-2-network-layer
-  phase-3-transport-layer
-  phase-4-names-and-trust
-  phase-5-application-layer
-  phase-l2-linux-internals
-  phase-6-linux-networking
-  phase-7-container-kubernetes
-  phase-8-cloud-internet
-  phase-9-observability
+  week-1-foundations
+  week-2-resilient
+  week-3-modern-secure
+  week-4-architect
 )
 
-section "Phase directories"
+# Parked: the networking curriculum. Kept, not required to grow.
+PARKED=( phase-0-map )
+
+section "Week directories"
 for s in "${SLUGS[@]}"; do
   [ -d "docs/$s" ] && pass "docs/$s" || fail "docs/$s missing"
   [ -d "labs/$s" ] && pass "labs/$s" || fail "labs/$s missing"
+done
+
+section "Parked curriculum still intact"
+for s in "${PARKED[@]}"; do
+  [ -d "docs/$s" ] && pass "docs/$s preserved" || fail "docs/$s went missing"
 done
 
 section "Top-level directories"
@@ -50,8 +51,8 @@ fi
 
 if [ -f PROGRESS.md ]; then
   n=$(grep -cE '^- \[[ x]\] `' PROGRESS.md)
-  [ "$n" -eq 83 ] && pass "PROGRESS.md lists 83 modules" \
-                  || fail "PROGRESS.md lists $n modules, expected 83"
+  [ "$n" -eq 30 ] && pass "PROGRESS.md lists 30 days" \
+                  || fail "PROGRESS.md lists $n days, expected 30"
 fi
 
 section "Documentation surfaces"
@@ -69,7 +70,7 @@ while IFS= read -r f; do
   b=$(basename "$f")
   echo "$b" | grep -qE '^(L?[0-9]+)-[0-9]{2}-[a-z0-9-]+\.md$' || {
     fail "doc misnamed: $f (want NN-MM-kebab-title.md)"; bad=1; }
-done < <(find docs -mindepth 2 -maxdepth 2 -name '*.md' -path 'docs/phase-*' 2>/dev/null)
+done < <(find docs -mindepth 2 -maxdepth 2 -name '*.md' \( -path 'docs/phase-*' -o -path 'docs/week-*' \) 2>/dev/null)
 [ "$bad" -eq 0 ] && pass "module docs follow the naming convention"
 
 section "Lab contract"

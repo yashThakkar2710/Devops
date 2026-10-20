@@ -4,149 +4,56 @@
      Tick boxes by hand; they survive regeneration.
      Do not edit anything else here - it will be overwritten. -->
 
-**1 / 83 modules complete** · ~247 hours total · study order is top to bottom.
+**0 / 30 modules complete** · ~99 hours total · one module per day, in order.
 
-Spec: [design spec](docs/superpowers/specs/2026-09-20-networking-curriculum-design.md)
+Spec: [design spec](docs/superpowers/specs/2026-10-21-aws-saa-30-day-design.md)
 
-## Phase 0 — The Map (1/1, ~3h)
+## Week 1 — Foundations you cannot fake (0/7, ~23h)
 
-`docs/phase-0-map/`
+`docs/week-1-foundations/`
 
-- [x] `00-01` Journey of a request: lab setup, capture one HTTPS request end to end, name every layer, produce the map of ignorance.
+- [ ] `01-01` Account safety and the IAM model: root lockdown, MFA, admin user, budget alarm, CloudTrail on. Build: secure the account end to end. Cost: $0
+- [ ] `01-02` IAM in depth: identity vs resource policies, JSON anatomy, roles and trust, assume-role, policy evaluation order, permission boundaries. Build: hand-write a policy, attach a role to EC2, test with the CLI, break it deliberately and read the denial. Cost: $0
+- [ ] `01-03` VPC from scratch: CIDR choice, availability zones, subnets, route tables, internet gateway. A public subnet is only a route table entry. Build: a VPC with two public and two private subnets across two AZs, no wizard. Cost: $0
+- [ ] `01-04` VPC egress and boundaries: NAT gateway, security groups vs NACLs, VPC endpoints. Build: private-subnet egress through NAT, then an S3 gateway endpoint that removes the need for it. Cost: NAT ~$0.045/hr — delete same day
+- [ ] `01-05` EC2: instance families, purchasing options, AMIs, user data, key pairs, EBS volume types and snapshots. Build: launch into your own VPC, install nginx via user data, attach and snapshot a volume, bake an AMI. Cost: t3.micro free tier
+- [ ] `01-06` S3: storage classes, lifecycle, versioning, bucket policy vs IAM, encryption options, static hosting, presigned URLs. Build: versioned bucket, lifecycle rule, static site, presigned URL, block public access. Cost: pennies
+- [ ] `01-07` Week 1 build and review: a working web server in your own VPC reading from S3 via an instance role, with no access keys anywhere. Cost: small
 
-## Phase L1 — Linux Working Knowledge (0/5, ~13h)
+## Week 2 — Resilient and scalable (0/7, ~23h)
 
-`docs/phase-l1-linux-foundations/`
+`docs/week-2-resilient/`
 
-- [ ] `L1-01` Kernel vs userspace, syscalls, and /proc and /sys as interfaces
-- [ ] `L1-02` Filesystem, paths, permissions, users, sudo
-- [ ] `L1-03` Processes, signals, and file descriptors — "everything is a file"
-- [ ] `L1-04` The shell for real: pipes, redirection, exit codes, job control
-- [ ] `L1-05` Packages, systemd services, logs and journald
+- [ ] `02-01` Load balancing: ALB vs NLB vs GWLB, listeners, target groups, health checks, path and host routing, stickiness, cross-zone. Build: ALB across two AZs, then terminate an instance and watch traffic move. Cost: ALB ~$0.0225/hr — delete same day
+- [ ] `02-02` Auto Scaling: launch templates, target tracking vs step vs scheduled, health check types, cooldowns, lifecycle hooks. Build: an ASG behind the ALB, load the CPU, watch it scale out and back in. Cost: small
+- [ ] `02-03` RDS: engines, Multi-AZ vs read replicas (the most-missed exam distinction), automated backups vs snapshots, subnet and parameter groups, encryption. Build: RDS in private subnets reachable only from the app tier; snapshot, restore, enable Multi-AZ. Cost: db.t3.micro free tier
+- [ ] `02-04` DynamoDB: partition and sort keys, on-demand vs provisioned, GSI vs LSI, DAX, streams, TTL, global tables. Build: a table, then compare the cost of query vs scan on the same data. Cost: free tier
+- [ ] `02-05` Storage and caching: EBS gp3/io2/st1/sc1, EFS vs EBS, FSx (know), ElastiCache Redis vs Memcached, Storage Gateway (know). Build: one EFS filesystem mounted on two instances at once. Cost: small
+- [ ] `02-06` DNS and edge: Route 53 record types, alias vs CNAME, routing policies (simple, weighted, latency, failover, geolocation, multivalue), health checks; CloudFront origins, behaviours, OAC, cache keys, invalidation; Global Accelerator (know). Build: CloudFront in front of a private S3 bucket using OAC. Cost: small
+- [ ] `02-07` Week 2 build: full three tier — CloudFront → ALB → ASG in private subnets → RDS Multi-AZ. Then remove an AZ and prove it survives. Cost: moderate — tear down fully
 
-## Phase 1 — Link Layer (0/7, ~18h)
+## Week 3 — Modern and secure (0/7, ~23h)
 
-`docs/phase-1-link-layer/`
+`docs/week-3-modern-secure/`
 
-- [ ] `01-01` What a network is: links, nodes, addressing, and why layering
-- [ ] `01-02` Bits to frames: encoding, clocking, framing, Ethernet anatomy, FCS
-- [ ] `01-03` MAC addressing: structure, OUI, unicast/multicast/broadcast; why L2 addressing exists when L3 addressing also exists
-- [ ] `01-04` Hubs to switches: collision vs broadcast domains, MAC learning, flooding, CAM tables
-- [ ] `01-05` ARP: the L2/L3 glue, cache behaviour, gratuitous and proxy ARP, spoofing, and the absence of authentication
-- [ ] `01-06` VLANs and 802.1Q: tagging, access vs trunk, native VLAN
-- [ ] `01-07` STP: loops and broadcast storms, root election, port states, RSTP
+- [ ] `03-01` Lambda and API Gateway: execution model, cold starts, memory and timeout, environment variables, layers, VPC attachment, concurrency and reserved concurrency; REST vs HTTP APIs, integrations, authorizers. Build: an API Gateway endpoint fronting a Lambda that reads DynamoDB. Cost: free tier
+- [ ] `03-02` Messaging and events: SQS standard vs FIFO, visibility timeout, dead-letter queues, long polling; SNS fan-out; EventBridge buses and rules; Kinesis and Step Functions (know). Choosing between SQS, SNS, EventBridge and Kinesis is a recurring exam question. Build: SNS fanning out to two SQS queues feeding Lambdas; force a failure into the DLQ. Cost: free tier
+- [ ] `03-03` Containers: ECR, ECS task definitions and services, Fargate vs EC2 launch type, EKS (know), and when a container beats a Lambda. Build: push an image to ECR and run it on Fargate behind the ALB. Cost: small — stop tasks same day
+- [ ] `03-04` Encryption and secrets: KMS key types, envelope encryption, key policies vs IAM, rotation; Secrets Manager vs Parameter Store; ACM issuance and validation. Build: a customer-managed key, encrypt a bucket and a volume, move the database password into Secrets Manager and read it from Lambda. Cost: KMS $1/key/month — delete after
+- [ ] `03-05` Security services: WAF rules and rate limiting, Shield Standard vs Advanced, GuardDuty, Inspector, Macie, Security Hub, Network Firewall (know). Which one detects, which one blocks, and where each sits. Build: a WAF rate-limit rule on the ALB, then trigger it deliberately. Cost: WAF ~$5/month — delete same day
+- [ ] `03-06` Observability: CloudWatch metrics, logs, alarms, dashboards and Log Insights; CloudTrail for audit; Config for compliance; X-Ray (know). Build: a custom metric, an alarm that emails via SNS, a Log Insights query, and one Config rule. Cost: small
+- [ ] `03-07` Week 3 build and review: make the week 2 architecture event-driven and encrypted end to end. Cost: moderate — tear down
 
-## Phase 2 — Network Layer (0/10, ~28h)
+## Week 4 — Architect decisions and exam shape (0/9, ~30h)
 
-`docs/phase-2-network-layer/`
+`docs/week-4-architect/`
 
-- [ ] `02-01` Why L3 exists: scaling past a broadcast domain, hierarchical addressing
-- [ ] `02-02` IPv4 addressing and binary fluency
-- [ ] `02-03` Subnetting, CIDR, VLSM — drilled to automaticity
-- [ ] `02-04` The IP header field by field: TTL, protocol, DSCP, flags
-- [ ] `02-05` The routing decision: longest prefix match, the Linux FIB, connected vs gateway routes
-- [ ] `02-06` How routing tables get populated: static, IGP (OSPF concepts), EGP (BGP concepts) — groundwork for Phase 8
-- [ ] `02-07` MTU, fragmentation, PMTUD, and PMTUD black holes
-- [ ] `02-08` ICMP and traceroute mechanics
-- [ ] `02-09` NAT: SNAT/DNAT/masquerade, conntrack introduction, NAT traversal, hairpinning, CGNAT
-- [ ] `02-10` IPv6: addressing, SLAAC, NDP, dual-stack operation
-
-## Phase 3 — Transport Layer (0/10, ~32h)
-
-`docs/phase-3-transport-layer/`
-
-- [ ] `03-01` Ports, sockets, the 5-tuple; what a socket is inside the kernel
-- [ ] `03-02` UDP: the minimal transport and when it is correct
-- [ ] `03-03` Connection establishment: the 3-way handshake and why three, ISN randomness, SYN queue vs accept queue, somaxconn, SYN flood and cookies
-- [ ] `03-04` Reliability: sequence numbers, cumulative ACK, SACK, RTO, fast retransmit
-- [ ] `03-05` Flow control: sliding window, window scaling, zero window, silly window syndrome
-- [ ] `03-06` Congestion control I: why it exists, slow start, AIMD, Reno
-- [ ] `03-07` Congestion control II: CUBIC, BBR, bufferbloat, AQM and fq_codel
-- [ ] `03-08` Teardown: FIN vs RST, the 11 states, TIME_WAIT, port exhaustion
-- [ ] `03-09` Nagle, delayed ACK, TCP_NODELAY, and the 40 ms stall
-- [ ] `03-10` TCP tuning and the latency budget: sysctls, where microseconds go
-
-## Phase 4 — Names and Trust (0/8, ~24h)
-
-`docs/phase-4-names-and-trust/`
-
-- [ ] `04-01` DNS: why names, the hierarchy, zones and delegation
-- [ ] `04-02` The resolution walk: stub, recursive, root, TLD, authoritative; iterative vs recursive
-- [ ] `04-03` Record types and zone files: SOA, NS, A/AAAA, CNAME, MX, TXT, SRV, PTR
-- [ ] `04-04` Caching, TTL, negative caching; why a change did not propagate
-- [ ] `04-05` DNS in production: split-horizon, anycast roots, EDNS, DNSSEC, DoH/DoT, failure modes
-- [ ] `04-06` TLS: the problem, symmetric vs asymmetric, the 1.2 handshake
-- [ ] `04-07` TLS 1.3, certificates and chain of trust, SNI, ALPN, resumption, 0-RTT
-- [ ] `04-08` PKI in practice: run your own CA, mTLS, rotation, pinning, error triage
-
-## Phase 5 — Application Layer (0/5, ~14h)
-
-`docs/phase-5-application-layer/`
-
-- [ ] `05-01` HTTP/1.1: anatomy, keep-alive, pipelining failure, head-of-line blocking
-- [ ] `05-02` HTTP/2: framing, multiplexing, HPACK, and its own TCP-level HOL blocking
-- [ ] `05-03` HTTP/3 and QUIC: why UDP, streams, connection migration, 0-RTT
-- [ ] `05-04` WebSockets and gRPC
-- [ ] `05-05` Proxies: forward vs reverse, CONNECT, X-Forwarded-For, PROXY protocol, TLS termination
-
-## Phase L2 — Linux Systems Internals (0/8, ~26h)
-
-`docs/phase-l2-linux-internals/`
-
-- [ ] `L2-01` Syscalls under the microscope: strace, the cost of the userspace/kernel transition
-- [ ] `L2-02` Process internals: fork/exec, scheduling, process states
-- [ ] `L2-03` Memory: virtual memory, page cache, the OOM killer, why free is misleading
-- [ ] `L2-04` cgroups: what a resource limit actually is, and why a container was OOM-killed
-- [ ] `L2-05` Namespaces, all eight types — the isolation half of containers
-- [ ] `L2-06` Storage, filesystems, and overlayfs — how a container image actually works
-- [ ] `L2-07` systemd in depth: units, dependency ordering, socket activation
-- [ ] `L2-08` Performance methodology: the USE method, vmstat/iostat/perf, flamegraphs
-
-## Phase 6 — Linux Networking Internals (0/10, ~30h)
-
-`docs/phase-6-linux-networking/`
-
-- [ ] `06-01` The kernel datapath: NIC, ring buffers, IRQ/softirq, NAPI, sk_buff, delivery to socket
-- [ ] `06-02` iproute2 fluency: ip link/addr/route/neigh/rule
-- [ ] `06-03` Netfilter architecture: the five hooks, tables, chains, traversal order
-- [ ] `06-04` iptables in practice: filter/nat/mangle, rule anatomy, reading real rulesets written by other software
-- [ ] `06-05` nftables
-- [ ] `06-06` Conntrack in depth: states, table sizing, timeouts, the NAT dependency, exhaustion and mid-stream failure modes
-- [ ] `06-07` Namespaces, veth, bridge, macvlan, ipvlan — the container primitives
-- [ ] `06-08` Policy routing, multiple tables, VRF concepts
-- [ ] `06-09` tc and qdiscs: shaping, policing, netem, fq_codel
-- [ ] `06-10` eBPF and XDP: the modern datapath
-
-## Phase 7 — Container and Kubernetes Networking (0/7, ~22h)
-
-`docs/phase-7-container-kubernetes/`
-
-- [ ] `07-01` Docker networking: bridge/host/none/macvlan and the iptables Docker writes
-- [ ] `07-02` The Kubernetes network model: the flat pod network requirement and why
-- [ ] `07-03` CNI: the specification, plugin invocation, flannel and VXLAN overlay
-- [ ] `07-04` Calico (BGP-routed) vs Cilium (eBPF): trade-offs
-- [ ] `07-05` Services and kube-proxy: ClusterIP as a DNAT rule, NodePort, LoadBalancer, iptables vs IPVS mode
-- [ ] `07-06` CoreDNS, Ingress controllers, ExternalTrafficPolicy
-- [ ] `07-07` NetworkPolicy and service mesh interception: sidecar iptables vs eBPF
-
-## Phase 8 — Cloud and Internet Scale (0/8, ~22h)
-
-`docs/phase-8-cloud-internet/`
-
-- [ ] `08-01` VPC internals: SDN, the mapping service, ENI as the real unit of networking, subnets and route tables
-- [ ] `08-02` Gateways: IGW, NAT Gateway vs NAT instance (cost and throughput reality), egress-only, gateway vs interface endpoints and PrivateLink
-- [ ] `08-03` Security groups (stateful, hypervisor-enforced) vs NACLs (stateless): why the asymmetry exists
-- [ ] `08-04` Connecting VPCs and on-prem: peering, Transit Gateway, VPN, Direct Connect, overlapping CIDR pain
-- [ ] `08-05` Load balancing: L4 vs L7, NLB/ALB internals, algorithms, health checks, connection draining, session affinity
-- [ ] `08-06` DNS and traffic management at scale: routing policies, anycast, CDN and edge
-- [ ] `08-07` BGP for real: AS numbers, eBGP/iBGP, path attributes, the path selection algorithm in order, peering vs transit
-- [ ] `08-08` Internet failure modes: route leaks, hijacks, RPKI, outage case studies
-
-## Phase 9 — Observability and Capstone (0/4, ~15h)
-
-`docs/phase-9-observability/`
-
-- [ ] `09-01` A troubleshooting methodology: layer bisection, hypothesis-driven diagnosis, avoiding the guess-and-check trap
-- [ ] `09-02` tcpdump and Wireshark mastery; BPF filter syntax from the ground up
-- [ ] `09-03` The toolbox: ss, ip, nstat, conntrack, mtr, ethtool
-- [ ] `09-04` Capstone: a set of deliberately broken environments diagnosed from symptoms with no hints, then a full re-trace of the Phase 0 request explaining every byte.
+- [ ] `04-01` Cost architecture: on-demand, reserved instances, Savings Plans, Spot; S3 storage class economics; data transfer pricing, which is the cost nobody predicts; Cost Explorer, budgets, Trusted Advisor, tagging. Build: analyse your own month's spend and set up tag-based cost allocation. Cost: $0
+- [ ] `04-02` Resilience and disaster recovery: RTO and RPO defined properly, the four strategies (backup and restore, pilot light, warm standby, multi-site active-active) and their cost/recovery tradeoff, AWS Backup, cross-region replication. Build: a backup plan and cross-region S3 replication. Cost: small
+- [ ] `04-03` Migration and hybrid: DMS, DataSync, the Snow family, Storage Gateway, Direct Connect, Site-to-Site VPN, Transit Gateway, PrivateLink, VPC peering. Mostly KNOW — the skill is matching tool to scenario. Build: peer two VPCs and route between them. Cost: $0
+- [ ] `04-04` Multi-account and governance: Organizations, OUs, SCPs vs IAM policies, consolidated billing, Control Tower (know), IAM Identity Center, Resource Access Manager. Build: explore Organizations read-only; write an SCP on paper and predict its effect. Cost: $0
+- [ ] `04-05` Decision tables: the "which service" comparisons the exam is built from — SQS vs SNS vs EventBridge vs Kinesis; ALB vs NLB; EBS vs EFS vs S3; RDS vs Aurora vs DynamoDB; Lambda vs Fargate vs EC2; Multi-AZ vs read replica vs multi-region. Build: write each table from memory, then check it. Cost: $0
+- [ ] `04-06` Practice exam 1, then review every question — including the ones answered correctly by guessing. Cost: $0
+- [ ] `04-07` Gap filling from exam 1: rebuild or re-read only the areas that failed. Cost: varies
+- [ ] `04-08` Practice exam 2 and review. Cost: $0
+- [ ] `04-09` Weak areas, final decision tables, practice exam 3, and the booking decision. Cost: $0

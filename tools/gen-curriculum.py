@@ -13,28 +13,20 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SPEC = ROOT / "docs/superpowers/specs/2026-09-20-networking-curriculum-design.md"
+SPEC = ROOT / "docs/superpowers/specs/2026-10-21-aws-saa-30-day-design.md"
 PROGRESS = ROOT / "PROGRESS.md"
 CURRICULUM_JS = ROOT / "site/assets/curriculum.js"
 
 SLUGS = {
-    "0": "phase-0-map",
-    "L1": "phase-l1-linux-foundations",
-    "1": "phase-1-link-layer",
-    "2": "phase-2-network-layer",
-    "3": "phase-3-transport-layer",
-    "4": "phase-4-names-and-trust",
-    "5": "phase-5-application-layer",
-    "L2": "phase-l2-linux-internals",
-    "6": "phase-6-linux-networking",
-    "7": "phase-7-container-kubernetes",
-    "8": "phase-8-cloud-internet",
-    "9": "phase-9-observability",
+    "1": "week-1-foundations",
+    "2": "week-2-resilient",
+    "3": "week-3-modern-secure",
+    "4": "week-4-architect",
 }
 
-# "### Phase L1 - Linux Working Knowledge (5 modules, ~13h)"
+# "### Week 1 - Foundations you cannot fake (7 modules, ~23h)"
 PHASE_RE = re.compile(
-    r"^### Phase (?P<id>L?\d+) [—-] (?P<title>.+?) "
+    r"^### (?:Phase|Week) (?P<id>L?\d+) [—-] (?P<title>.+?) "
     r"\((?P<count>\d+) modules?, ~(?P<hours>\d+)h\)\s*$"
 )
 # "- `L1-03` Processes, signals, and **file descriptors** - ..."
@@ -128,16 +120,16 @@ def render_progress(phases: list[dict], done: set[str]) -> str:
         "     Do not edit anything else here - it will be overwritten. -->",
         "",
         f"**{complete} / {total} modules complete** · ~{hours} hours total · "
-        "study order is top to bottom.",
+        "one module per day, in order.",
         "",
         "Spec: [design spec]"
-        "(docs/superpowers/specs/2026-09-20-networking-curriculum-design.md)",
+        "(docs/superpowers/specs/2026-10-21-aws-saa-30-day-design.md)",
         "",
     ]
     for p in phases:
         pdone = sum(1 for mod in p["modules"] if mod["id"] in done)
         out.append(
-            f"## Phase {p['id']} — {p['title']} "
+            f"## Week {p['id']} — {p['title']} "
             f"({pdone}/{len(p['modules'])}, ~{p['hours']}h)"
         )
         out.append("")

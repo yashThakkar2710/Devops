@@ -8,7 +8,7 @@
   var STORE = "netcurriculum.progress";
   var THEME = "netcurriculum.theme";
   /* Phase ids that have a page built. Add an id here when its page ships. */
-  var BUILT = ["0"];
+  var BUILT = [];
   var phasesEl = document.getElementById("phases");
   var searchEl = document.getElementById("search");
   var emptyEl = document.getElementById("empty");
