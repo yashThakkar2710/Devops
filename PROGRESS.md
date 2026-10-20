@@ -4,16 +4,16 @@
      Tick boxes by hand; they survive regeneration.
      Do not edit anything else here - it will be overwritten. -->
 
-**1 / 30 modules complete** · ~99 hours total · one module per day, in order.
+**1 / 30 modules complete** · ~100 hours total · one module per day, in order.
 
 Spec: [design spec](docs/superpowers/specs/2026-10-21-aws-saa-30-day-design.md)
 
-## Week 1 — Foundations you cannot fake (1/7, ~23h)
+## Week 1 — Foundations you cannot fake (1/7, ~24h)
 
 `docs/week-1-foundations/`
 
 - [x] `01-01` Account safety and the IAM model: root lockdown, MFA, admin user, budget alarm, CloudTrail on. Build: secure the account end to end. Cost: $0
-- [ ] `01-02` IAM in depth: identity vs resource policies, JSON anatomy, roles and trust, assume-role, policy evaluation order, permission boundaries. Build: hand-write a policy, attach a role to EC2, test with the CLI, break it deliberately and read the denial. Cost: $0
+- [ ] `01-02` IAM in depth: identity vs resource policies, JSON anatomy, roles and trust, assume-role, policy evaluation order (explicit Deny beats everything), conditions, permission boundaries. Build: hand-write a policy, attach a role to EC2, test with the CLI, break it deliberately and read the denial. Then two policies that do real work: account-wide MFA enforcement (Deny + NotAction + BoolIfExists aws:MultiFactorAuthPresent, with the lockout trap avoided) and a budget action that attaches a deny policy automatically when spending crosses a threshold. Cost: $0 · ~4h
 - [ ] `01-03` VPC from scratch: CIDR choice, availability zones, subnets, route tables, internet gateway. A public subnet is only a route table entry. Build: a VPC with two public and two private subnets across two AZs, no wizard. Cost: $0
 - [ ] `01-04` VPC egress and boundaries: NAT gateway, security groups vs NACLs, VPC endpoints. Build: private-subnet egress through NAT, then an S3 gateway endpoint that removes the need for it. Cost: NAT ~$0.045/hr — delete same day
 - [ ] `01-05` EC2: instance families, purchasing options, AMIs, user data, key pairs, EBS volume types and snapshots. Build: launch into your own VPC, install nginx via user data, attach and snapshot a volume, bake an AMI. Cost: t3.micro free tier

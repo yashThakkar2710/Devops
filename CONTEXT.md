@@ -13,7 +13,7 @@ Updated at the end of each day.
 |---|---|
 | **Day** | 1 of 30 complete |
 | **Last completed** | `01-01` Account safety and the IAM model |
-| **Next** | `01-02` IAM in depth — policies, roles, trust |
+| **Next** | `01-02` IAM in depth — policies, roles, trust, **MFA enforcement**, **budget actions** |
 | **Started** | 2026-10-21 |
 | **Target** | AWS Solutions Architect Associate level by ~2026-11-20 |
 
@@ -201,6 +201,16 @@ default VPC    created automatically by AWS - ignored, we build our own on day 3
 Credit activities remaining: EC2 instance (day 5), RDS/Aurora (day 10),
 Lambda web app (day 15), Bedrock model (not in plan — 10 min, worth taking).
 Cost budget already claimed.
+
+**Asked for and agreed, to be built on day 2:**
+- **Account-wide MFA enforcement** — a `Deny` policy conditioned on
+  `BoolIfExists aws:MultiFactorAuthPresent`, with `NotAction` carving out
+  the MFA-setup calls so nobody can lock themselves out. Root is unaffected;
+  IAM policies cannot restrict root, and its MFA is already set by hand.
+- **Budget actions** — the real circuit breaker. A budget alert only emails;
+  a budget *action* can attach a deny policy or stop EC2/RDS when a
+  threshold is crossed. Matters most once the account moves off the free
+  plan, so build it now while learning policies.
 
 **Known quirks on this account:**
 - Cost Explorer forecast showed *access denied* on day 1 — needs up to 24h

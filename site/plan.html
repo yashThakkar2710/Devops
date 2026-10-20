@@ -151,7 +151,7 @@
 
   <div class="facts">
     <div class="fact"><b>30</b><span>days</span></div>
-    <div class="fact"><b>99</b><span>hours total</span></div>
+    <div class="fact"><b>100</b><span>hours total</span></div>
     <div class="fact"><b>3.5</b><span>hours per day</span></div>
     <div class="fact"><b>60%</b><span>spent building</span></div>
   </div>
@@ -239,7 +239,7 @@
       <header>
         <span class="wnum">Week 1</span>
         <span class="wtitle">Foundations you cannot fake</span>
-        <span class="whours">~23h</span>
+        <span class="whours">~24h</span>
       </header>
 
       <div class="day"><div class="dnum">01</div><div class="dbody">
@@ -251,9 +251,9 @@
 
       <div class="day"><div class="dnum">02</div><div class="dbody">
         <h5>IAM in depth</h5>
-        <div class="dsvc"><span class="chip">IAM policies</span><span class="chip">roles</span><span class="chip">trust</span></div>
-        <p class="dbuild"><b>Build:</b> hand-write a policy, attach a role to EC2, test it with the CLI, then break it deliberately and read the denial.</p>
-        <span class="dcost">cost: $0</span>
+        <div class="dsvc"><span class="chip">IAM policies</span><span class="chip">roles</span><span class="chip">trust</span><span class="chip">conditions</span></div>
+        <p class="dbuild"><b>Build:</b> hand-write a policy, attach a role to EC2, test it with the CLI, then break it deliberately and read the denial. Then two policies that do real work: <b>account-wide MFA enforcement</b>, and a <b>budget action</b> that attaches a deny policy automatically when spending crosses a threshold — a real circuit breaker, since a budget alert on its own only sends email.</p>
+        <span class="dcost">cost: $0 · ~4h</span>
       </div></div>
 
       <div class="day"><div class="dnum">03</div><div class="dbody">

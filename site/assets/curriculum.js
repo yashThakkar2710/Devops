@@ -5,7 +5,7 @@ window.CURRICULUM = [
     "id": "1",
     "slug": "week-1-foundations",
     "title": "Foundations you cannot fake",
-    "hours": 23,
+    "hours": 24,
     "modules": [
       {
         "id": "01-01",
@@ -13,7 +13,7 @@ window.CURRICULUM = [
       },
       {
         "id": "01-02",
-        "title": "IAM in depth: identity vs resource policies, JSON anatomy, roles and trust, assume-role, policy evaluation order, permission boundaries. Build: hand-write a policy, attach a role to EC2, test with the CLI, break it deliberately and read the denial. Cost: $0"
+        "title": "IAM in depth: identity vs resource policies, JSON anatomy, roles and trust, assume-role, policy evaluation order (explicit Deny beats everything), conditions, permission boundaries. Build: hand-write a policy, attach a role to EC2, test with the CLI, break it deliberately and read the denial. Then two policies that do real work: account-wide MFA enforcement (Deny + NotAction + BoolIfExists aws:MultiFactorAuthPresent, with the lockout trap avoided) and a budget action that attaches a deny policy automatically when spending crosses a threshold. Cost: $0 · ~4h"
       },
       {
         "id": "01-03",
