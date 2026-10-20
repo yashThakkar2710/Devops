@@ -56,7 +56,7 @@ if [ -f PROGRESS.md ]; then
 fi
 
 section "Documentation surfaces"
-for f in README.md reference/glossary.md reference/rfc-index.md \
+for f in README.md CONTEXT.md reference/glossary.md reference/rfc-index.md \
          reference/cheatsheets/README.md recall/README.md \
          labs/LAB-CONVENTIONS.md; do
   [ -f "$f" ] && pass "$f" || fail "$f missing"

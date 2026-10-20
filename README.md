@@ -14,6 +14,9 @@ names.
 2. Track days in [PROGRESS.md](PROGRESS.md).
 3. Begin with `docs/week-1-foundations/`.
 
+**Starting a fresh chat?** Point the assistant at [CONTEXT.md](CONTEXT.md).
+It carries the plan, the teaching rules, what is done and what is next.
+
 ## How a day works
 
 1. **Concept** — what problem the service solves, before any clicking. 20–30 min.
