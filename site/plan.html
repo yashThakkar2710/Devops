@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The 30 day plan</title>
+<link rel="stylesheet" href="assets/site.css">
+<style>
+  :root {
+    --build: #3fb950;
+    --know:  #a371f7;
+    --warn:  #f0883e;
+  }
+  :root[data-theme="light"] {
+    --build: #1a7f37;
+    --know:  #8250df;
+    --warn:  #bc4c00;
+  }
+
+  .crumb { padding: 20px 0 0; font-size: 13px; }
+  .crumb a { color: var(--accent); text-decoration: none; }
+  .crumb a:hover { text-decoration: underline; }
+
+  .lede { padding: 22px 0 10px; max-width: 66ch; }
+  .lede h1 { margin: 0 0 10px; font-size: 27px; letter-spacing: -.02em; }
+  .lede p { margin: 0 0 10px; color: var(--ink-dim); }
+
+  .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin: 20px 0 6px; }
+  .fact { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 13px 15px; }
+  .fact b { display: block; font-size: 21px; letter-spacing: -.02em; }
+  .fact span { font-size: 12.5px; color: var(--ink-dim); }
+
+  section { padding: 32px 0; border-top: 1px solid var(--line); }
+  section > h2 { margin: 0 0 6px; font-size: 18px; letter-spacing: -.01em; }
+  section > .sub { margin: 0 0 20px; color: var(--ink-dim); font-size: 14px; max-width: 66ch; }
+  h3.minor { margin: 26px 0 10px; font-size: 15px; }
+  p { max-width: 66ch; }
+
+  /* service tiers */
+  .tiers { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 14px; margin-bottom: 18px; }
+  .tier { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; }
+  .tier.b { border-color: color-mix(in srgb, var(--build) 42%, var(--line)); }
+  .tier.k { border-color: color-mix(in srgb, var(--know) 42%, var(--line)); }
+  .tier h4 { margin: 0 0 3px; font-size: 14px; }
+  .tier.b h4 { color: var(--build); }
+  .tier.k h4 { color: var(--know); }
+  .tier .note { margin: 0 0 12px; font-size: 13px; color: var(--ink-dim); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    font-family: var(--mono); font-size: 11.5px; padding: 3px 8px;
+    border-radius: 5px; background: var(--panel-2); border: 1px solid var(--line-soft);
+    color: var(--ink-dim);
+  }
+  .tier.b .chip { color: color-mix(in srgb, var(--build) 75%, var(--ink)); }
+  .tier.k .chip { color: color-mix(in srgb, var(--know) 75%, var(--ink)); }
+
+  /* weeks */
+  .week { margin-bottom: 26px; }
+  .week > header {
+    display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+    padding-bottom: 10px; margin-bottom: 2px; border-bottom: 1px solid var(--line);
+  }
+  .wnum {
+    font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    padding: 2px 8px; border-radius: 5px;
+  }
+  .wtitle { font-size: 15.5px; font-weight: 600; letter-spacing: -.01em; }
+  .whours { margin-left: auto; font-family: var(--mono); font-size: 12px; color: var(--ink-faint); }
+
+  .day {
+    display: grid; grid-template-columns: 4.5ch 1fr; gap: 14px;
+    padding: 13px 0; border-bottom: 1px solid var(--line-soft);
+  }
+  .day:last-child { border-bottom: 0; }
+  .dnum { font-family: var(--mono); font-size: 12.5px; color: var(--ink-faint); padding-top: 2px; }
+  .dbody h5 { margin: 0 0 5px; font-size: 14px; font-weight: 600; }
+  .dsvc { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 7px; }
+  .dbuild { margin: 0; font-size: 13.5px; color: var(--ink-dim); }
+  .dbuild b { color: var(--ink); font-weight: 600; }
+  .dcost {
+    display: inline-block; margin-top: 6px; font-size: 11.5px;
+    font-family: var(--mono); color: var(--ink-faint);
+  }
+  .dcost.paid { color: var(--warn); }
+
+  /* cost table */
+  .costs { border: 1px solid color-mix(in srgb, var(--warn) 35%, var(--line)); border-radius: var(--radius); overflow: hidden; margin: 16px 0 20px; }
+  .crow { display: grid; grid-template-columns: 1fr 13ch; gap: 12px; padding: 10px 14px; font-size: 13.5px; border-bottom: 1px solid var(--line-soft); }
+  .crow:last-child { border-bottom: 0; }
+  .crow.head { background: color-mix(in srgb, var(--warn) 11%, var(--panel)); color: var(--ink-faint); font-size: 12px; }
+  .crow span:last-child { font-family: var(--mono); color: var(--warn); text-align: right; }
+  .crow.head span:last-child { color: var(--ink-faint); }
+
+  /* method steps - a genuine sequence, so numbered */
+  .steps { counter-reset: s; display: grid; gap: 12px; margin: 16px 0 0; }
+  .step { counter-increment: s; display: grid; grid-template-columns: 26px 1fr; gap: 13px; align-items: start; }
+  .step::before {
+    content: counter(s); font-family: var(--mono); font-size: 12px;
+    width: 26px; height: 26px; display: grid; place-items: center;
+    border: 1px solid var(--line); border-radius: 50%; color: var(--ink-faint);
+  }
+  .step b { display: block; font-size: 14px; margin-bottom: 2px; }
+  .step p { margin: 0; font-size: 13.5px; color: var(--ink-dim); }
+
+  .callout {
+    margin: 20px 0; padding: 15px 17px; border-radius: var(--radius);
+    background: color-mix(in srgb, var(--warn) 10%, var(--panel));
+    border: 1px solid color-mix(in srgb, var(--warn) 38%, var(--line));
+  }
+  .callout p { margin: 0; }
+  .callout .big { font-size: 15.5px; font-weight: 600; margin-bottom: 4px; }
+
+  .vocab { display: grid; }
+  .vrow { display: grid; grid-template-columns: 19ch 1fr; gap: 16px; padding: 10px 0; border-bottom: 1px solid var(--line-soft); }
+  .vrow:last-child { border-bottom: 0; }
+  .vrow dt { font-size: 13.5px; color: var(--accent); }
+  .vrow dd { margin: 0; font-size: 13.5px; color: var(--ink-dim); }
+
+  .foot { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+    border-top: 1px solid var(--line); padding-top: 16px; padding-bottom: 34px;
+    font-size: 12px; color: var(--ink-faint); }
+
+  @media (max-width: 620px) {
+    .day { grid-template-columns: 1fr; gap: 4px; }
+    .vrow { grid-template-columns: 1fr; gap: 2px; }
+    .whours { margin-left: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <div class="brand"><span class="brand-mark">//</span><span>AWS in 30 days</span></div>
+    <div class="topbar-tools"><button id="theme" type="button" title="Toggle theme">◐</button></div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <p class="crumb"><a href="index.html">← Progress</a></p>
+
+  <div class="lede">
+    <h1>The 30 day plan</h1>
+    <p>Reach Solutions Architect Associate level by building, not reading.
+    The certificate is a checkpoint near day 30, not the point — the goal is
+    being able to choose and defend an architecture.</p>
+  </div>
+
+  <div class="facts">
+    <div class="fact"><b>30</b><span>days</span></div>
+    <div class="fact"><b>99</b><span>hours total</span></div>
+    <div class="fact"><b>3.5</b><span>hours per day</span></div>
+    <div class="fact"><b>60%</b><span>spent building</span></div>
+  </div>
+
+  <section>
+    <h2>Why this fits in a month</h2>
+    <p class="sub">Not every service deserves hands-on. Deciding what
+    <em>not</em> to touch is what makes a month viable — attempting all of
+    AWS is the usual reason one-month attempts collapse.</p>
+
+    <div class="tiers">
+      <div class="tier b">
+        <h4>BUILD — about 25 services</h4>
+        <p class="note">Created, broken and fixed by hand. The ones an
+        architect reasons about daily.</p>
+        <div class="chips">
+          <span class="chip">IAM</span><span class="chip">VPC</span><span class="chip">EC2</span>
+          <span class="chip">EBS</span><span class="chip">S3</span><span class="chip">ALB</span>
+          <span class="chip">NLB</span><span class="chip">Auto Scaling</span><span class="chip">RDS</span>
+          <span class="chip">DynamoDB</span><span class="chip">EFS</span><span class="chip">ElastiCache</span>
+          <span class="chip">Route 53</span><span class="chip">CloudFront</span><span class="chip">Lambda</span>
+          <span class="chip">API Gateway</span><span class="chip">SQS</span><span class="chip">SNS</span>
+          <span class="chip">EventBridge</span><span class="chip">ECR</span><span class="chip">ECS / Fargate</span>
+          <span class="chip">KMS</span><span class="chip">Secrets Manager</span><span class="chip">WAF</span>
+          <span class="chip">CloudWatch</span><span class="chip">CloudTrail</span><span class="chip">AWS Backup</span>
+        </div>
+      </div>
+
+      <div class="tier k">
+        <h4>KNOW — about 30 services</h4>
+        <p class="note">Recognised and chosen correctly, never deployed.
+        Exam-relevant and job-relevant as decisions, not as skills.</p>
+        <div class="chips">
+          <span class="chip">Aurora</span><span class="chip">FSx</span><span class="chip">Storage Gateway</span>
+          <span class="chip">Global Accelerator</span><span class="chip">EKS</span><span class="chip">Step Functions</span>
+          <span class="chip">Kinesis</span><span class="chip">Shield</span><span class="chip">GuardDuty</span>
+          <span class="chip">Inspector</span><span class="chip">Macie</span><span class="chip">Security Hub</span>
+          <span class="chip">Config</span><span class="chip">X-Ray</span><span class="chip">DMS</span>
+          <span class="chip">DataSync</span><span class="chip">Snowball</span><span class="chip">Direct Connect</span>
+          <span class="chip">Site-to-Site VPN</span><span class="chip">Transit Gateway</span><span class="chip">PrivateLink</span>
+          <span class="chip">Organizations</span><span class="chip">SCPs</span><span class="chip">Control Tower</span>
+          <span class="chip">IAM Identity Center</span><span class="chip">RAM</span><span class="chip">Network Firewall</span>
+        </div>
+      </div>
+    </div>
+
+    <h3 class="minor">One architecture, grown over four weeks</h3>
+    <p>Not thirty disconnected tutorials. The same system gets better each
+    week, so by day 30 you have built the architecture the exam describes.</p>
+    <div class="steps">
+      <div class="step"><div><b>Week 1</b><p>A server, inside a network you built by hand.</p></div></div>
+      <div class="step"><div><b>Week 2</b><p>It survives an availability zone failure and scales under load.</p></div></div>
+      <div class="step"><div><b>Week 3</b><p>It becomes event-driven, encrypted and locked down.</p></div></div>
+      <div class="step"><div><b>Week 4</b><p>It gets monitored, cost-optimised and given a recovery plan.</p></div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Before anything else: money</h2>
+    <p class="sub">Free tier is not free. These are the charges that catch
+    people, and all of them come from leaving something running.</p>
+
+    <div class="costs">
+      <div class="crow head"><span>left running</span><span>costs</span></div>
+      <div class="crow"><span>NAT Gateway — the most common surprise</span><span>~$32/mo</span></div>
+      <div class="crow"><span>Application Load Balancer</span><span>~$16/mo</span></div>
+      <div class="crow"><span>Unattached Elastic IP</span><span>~$3.60/mo</span></div>
+      <div class="crow"><span>KMS customer-managed key</span><span>~$1/mo</span></div>
+      <div class="crow"><span>WAF web ACL</span><span>~$5/mo</span></div>
+    </div>
+
+    <div class="callout">
+      <p class="big">Four rules, kept without exception</p>
+      <p>Budget alarm at $5 on day 1, before creating anything. Every lab is
+      torn down the same day. Each day below states its cost risk. Check the
+      billing console every Monday.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>The thirty days</h2>
+    <p class="sub">Each day: what you learn, and what you actually build.</p>
+
+    <div class="week">
+      <header>
+        <span class="wnum">Week 1</span>
+        <span class="wtitle">Foundations you cannot fake</span>
+        <span class="whours">~23h</span>
+      </header>
+
+      <div class="day"><div class="dnum">01</div><div class="dbody">
+        <h5>Account safety and the IAM model</h5>
+        <div class="dsvc"><span class="chip">IAM</span><span class="chip">Billing</span><span class="chip">CloudTrail</span></div>
+        <p class="dbuild"><b>Build:</b> lock the root user, MFA, an admin user you use from now on, a $5 budget alarm, CloudTrail on.</p>
+        <span class="dcost">cost: $0</span>
+      </div></div>
+
+      <div class="day"><div class="dnum">02</div><div class="dbody">
+        <h5>IAM in depth</h5>
+        <div class="dsvc"><span class="chip">IAM policies</span><span class="chip">roles</span><span class="chip">trust</span></div>
+        <p class="dbuild"><b>Build:</b> hand-write a policy, attach a role to EC2, test it with the CLI, then break it deliberately and read the denial.</p>
+        <span class="dcost">cost: $0</span>
+      </div></div>
+
+      <div class="day"><div class="dnum">03</div><div class="dbody">
+        <h5>A VPC from scratch</h5>
+        <div class="dsvc"><span class="chip">VPC</span><span class="chip">subnets</span><span class="chip">route tables</span><span class="chip">IGW</span></div>
+        <p class="dbuild"><b>Build:</b> two public and two private subnets across two AZs, with no wizard. A public subnet turns out to be nothing but a route table entry.</p>
+        <span class="dcost">cost: $0</span>
+      </div></div>
+
+      <div class="day"><div class="dnum">04</div><div class="dbody">
+        <h5>Egress and boundaries</h5>
+        <div class="dsvc"><span class="chip">NAT Gateway</span><span class="chip">Security Groups</span><span class="chip">NACLs</span><span class="chip">VPC Endpoints</span></div>
+        <p class="dbuild"><b>Build:</b> private-subnet egress through NAT, then an S3 gateway endpoint that removes the need for it.</p>
+        <span class="dcost paid">cost: NAT ~$0.045/hr — delete same day</span>
+      </div></div>
+
+      <div class="day"><div class="dnum">05</div><div class="dbody">
+        <h5>EC2 and block storage</h5>
+        <div class="dsvc"><span class="chip">EC2</span><span class="chip">EBS</span><span class="chip">AMI</span></div>
+        <p class="dbuild"><b>Build:</b> launch into your own VPC, install nginx through user data, attach and snapshot a volume, bake an AMI.</p>
+        <span class="dcost">cost: t3.micro free tier</span>
+      </div></div>
+
+      <div class="day"><div class="dnum">06</div><div class="dbody">
+        <h5>S3</h5>
+        <div class="dsvc"><span class="chip">S3</span><span class="chip">lifecycle</span><span class="chip">bucket policy</span></div>
+        <p class="dbuild"><b>Build:</b> a versioned bucket, a lifecycle rule, a static site, a presigned URL, and block public access.</p>
+        <span class="dcost">cost: pennies</span>
+      </div></div>
+
+      <div class="day"><div class="dnum">07</div><div class="dbody">
+        <h5>Week 1 build</h5>
+        <p class="dbuild"><b>Build:</b> a web server in your own VPC reading from S3 <b>through an instance role, with no access keys anywhere</b>.</p>
+        <span class="dcost">cost: small</span>
+      </div></div>
+    </div>
+
+    <div class="week">
+      <header>
+        <span class="wnum">Week 2</span>
+        <span class="wtitle">Resilient and scalable</span>
+        <span class="whours">~23h</span>
+      </header>
+
+      <div class="day"><div class="dnum">08</div><div class="dbody">
+        <h5>Load balancing</h5>
+        <div class="dsvc"><span class="chip">ALB</span><span class="chip">NLB</span><span class="chip">target groups</span></div>
+        <p class="dbuild"><b>Build:</b> an ALB across two AZs, then terminate an instance and watch traffic move.</p>
+        <span class="dcost paid">cost: ALB ~$0.0225/hr — delete same day</span>
+      </div></div>
+
+      <div class="day"><div class="dnum">09</div><div class="dbody">
+        <h5>Auto Scaling</h5>
+        <div class="dsvc"><span class="chip">ASG</span><span class="chip">launch templates</span></div>
+        <p class="dbuild"><b>Build:</b> an ASG behind the ALB. Load the CPU and watch it scale out, then back in.</p>
+        <span class="dcost">cost: small</span>
+      </div></div>
+
+      <div class="day"><div class="dnum">10</div><div class="dbody">
+        <h5>RDS</h5>
+        <div class="dsvc"><span class="chip">RDS</span><span class="chip">Multi-AZ</span><span class="chip">read replicas</span></div>
+        <p class="dbuild"><b>Build:</b> a database in private subnets reachable only from the app tier. Snapshot it, restore it, enable Multi-AZ. <b>Multi-AZ versus read replica is the most-missed distinction on the exam.</b></p>
+        <span class="dcost">cost: db.t3.micro free tier</span>
+      </div></div>
+
+      <div class="day"><div class="dnum">11</div><div class="dbody">
+        <h5>DynamoDB</h5>
+        <div class="dsvc"><span class="chip">DynamoDB</span><span class="chip">GSI</span><span class="chip">streams</span></div>
+        <p class="dbuild"><b>Build:</b> a table and an index, then compare the cost of a query against a scan on the same data.</p>
+        <span class="dcost">cost: free tier</span>
+      </div></div>
+
+      <div class="day"><div class="dnum">12</div><div class="dbody">
+        <h5>Storage and caching</h5>
+        <div class="dsvc"><span class="chip">EBS types</span><span class="chip">EFS</span><span class="chip">ElastiCache</span></div>
+        <p class="dbuild"><b>Build:</b> one EFS filesystem mounted on two instances at the same time — the thing EBS cannot do.</p>
+        <span class="dcost">cost: small</span>
+      </div></div>
+
+      <div class="day"><div class="dnum">13</div><div class="dbody">
+        <h5>DNS and the edge</h5>
+        <div class="dsvc"><span class="chip">Route 53</span><span class="chip">CloudFront</span><span class="chip">OAC</span></div>
+        <p class="dbuild"><b>Build:</b> CloudFront in front of a private S3 bucket using OAC, so the bucket is never public.</p>
+        <span class="dcost">cost: small</span>
+      </div></div>
+
+      <div class="day"><div class="dnum">14</div><div class="dbody">
+        <h5>Week 2 build</h5>
+        <p class="dbuild"><b>Build:</b> the full three tier — CloudFront, ALB, an ASG in private subnets, RDS Multi-AZ. <b>Then remove an availability zone and prove it survives.</b></p>
+        <span class="dcost paid">cost: moderate — tear down fully</span>
+      </div></div>
+    </div>
+
+    <div class="week">
+      <header>
+        <span class="wnum">Week 3</span>
+        <span class="wtitle">Modern and secure</span>
+        <span class="whours">~23h</span>
+      </header>
+
+      <div class="day"><div class="dnum">15</div><div class="dbody">
+        <h5>Lambda and API Gateway</h5>
+        <div class="dsvc"><span class="chip">Lambda</span><span class="chip">API Gateway</span></div>
+        <p class="dbuild"><b>Build:</b> an API endpoint in front of a Lambda that reads DynamoDB.</p>
+        <span class="dcost">cost: free tier</span>
+      </div></div>
+
+      <div class="day"><div class="dnum">16</div><div class="dbody">
+        <h5>Messaging and events</h5>
+        <div class="dsvc"><span class="chip">SQS</span><span class="chip">SNS</span><span class="chip">EventBridge</span></div>
+        <p class="dbuild"><b>Build:</b> SNS fanning out to two queues feeding Lambdas, then force a failure into a dead-letter queue. <b>Choosing between SQS, SNS, EventBridge and Kinesis is a recurring exam question.</b></p>
+        <span class="dcost">cost: free tier</span>
+      </div></div>
+
+      <div class="day"><div class="dnum">17</div><div class="dbody">
+        <h5>Containers</h5>
+        <div class="dsvc"><span class="chip">ECR</span><span class="chip">ECS</span><span class="chip">Fargate</span></div>
+        <p class="dbuild"><b>Build:</b> push an image to ECR and run it on Fargate behind the ALB.</p>
+        <span class="dcost paid">cost: small — stop tasks same day</span>
+      </div></div>
+
+      <div class="day"><div class="dnum">18</div><div class="dbody">
+        <h5>Encryption and secrets</h5>
+        <div class="dsvc"><span class="chip">KMS</span><span class="chip">Secrets Manager</span><span class="chip">ACM</span></div>
+        <p class="dbuild"><b>Build:</b> your own key, encrypt a bucket and a volume, and move the database password out of code into Secrets Manager.</p>
+        <span class="dcost paid">cost: KMS $1/key/month — delete after</span>
+      </div></div>
+
+      <div class="day"><div class="dnum">19</div><div class="dbody">
+        <h5>Security services</h5>
+        <div class="dsvc"><span class="chip">WAF</span><span class="chip">Shield</span><span class="chip">GuardDuty</span></div>
+        <p class="dbuild"><b>Build:</b> a rate-limit rule on the ALB, then trigger it deliberately. Learn which service detects, which blocks, and where each sits.</p>
+        <span class="dcost paid">cost: WAF ~$5/mo — delete same day</span>
+      </div></div>
+
+      <div class="day"><div class="dnum">20</div><div class="dbody">
+        <h5>Observability</h5>
+        <div class="dsvc"><span class="chip">CloudWatch</span><span class="chip">CloudTrail</span><span class="chip">Config</span></div>
+        <p class="dbuild"><b>Build:</b> a custom metric, an alarm that emails you through SNS, a Log Insights query, and one Config rule.</p>
+        <span class="dcost">cost: small</span>
+      </div></div>
+
+      <div class="day"><div class="dnum">21</div><div class="dbody">
+        <h5>Week 3 build</h5>
+        <p class="dbuild"><b>Build:</b> make week 2's architecture event-driven and encrypted end to end.</p>
+        <span class="dcost paid">cost: moderate — tear down</span>
+      </div></div>
+    </div>
+
+    <div class="week">
+      <header>
+        <span class="wnum">Week 4</span>
+        <span class="wtitle">Architect decisions and exam shape</span>
+        <span class="whours">~30h</span>
+      </header>
+
+      <div class="day"><div class="dnum">22</div><div class="dbody">
+        <h5>Cost architecture</h5>
+        <div class="dsvc"><span class="chip">Savings Plans</span><span class="chip">Spot</span><span class="chip">Cost Explorer</span></div>
+        <p class="dbuild"><b>Build:</b> analyse your own month of spending and set up tag-based cost allocation. Includes <b>data transfer pricing</b> — the cost nobody predicts.</p>
+        <span class="dcost">cost: $0</span>
+      </div></div>
+
+      <div class="day"><div class="dnum">23</div><div class="dbody">
+        <h5>Resilience and disaster recovery</h5>
+        <div class="dsvc"><span class="chip">RTO / RPO</span><span class="chip">AWS Backup</span><span class="chip">replication</span></div>
+        <p class="dbuild"><b>Build:</b> a backup plan and cross-region S3 replication. The four DR strategies and what each costs to achieve.</p>
+        <span class="dcost">cost: small</span>
+      </div></div>
+
+      <div class="day"><div class="dnum">24</div><div class="dbody">
+        <h5>Migration and hybrid</h5>
+        <div class="dsvc"><span class="chip">DMS</span><span class="chip">Snow</span><span class="chip">Direct Connect</span><span class="chip">TGW</span></div>
+        <p class="dbuild"><b>Build:</b> peer two VPCs and route between them. The rest is matching tool to scenario, which is exactly how the exam asks.</p>
+        <span class="dcost">cost: $0</span>
+      </div></div>
+
+      <div class="day"><div class="dnum">25</div><div class="dbody">
+        <h5>Multi-account and governance</h5>
+        <div class="dsvc"><span class="chip">Organizations</span><span class="chip">SCPs</span><span class="chip">Identity Center</span></div>
+        <p class="dbuild"><b>Build:</b> explore Organizations read-only, then write an SCP on paper and predict its effect before checking. <b>SCPs versus IAM policies</b> is a classic trap.</p>
+        <span class="dcost">cost: $0</span>
+      </div></div>
+
+      <div class="day"><div class="dnum">26</div><div class="dbody">
+        <h5>Decision tables</h5>
+        <p class="dbuild"><b>Build:</b> write from memory, then check — SQS vs SNS vs EventBridge vs Kinesis · ALB vs NLB · EBS vs EFS vs S3 · RDS vs Aurora vs DynamoDB · Lambda vs Fargate vs EC2 · Multi-AZ vs read replica vs multi-region.</p>
+        <span class="dcost">cost: $0</span>
+      </div></div>
+
+      <div class="day"><div class="dnum">27</div><div class="dbody">
+        <h5>Practice exam 1</h5>
+        <p class="dbuild">Then review <b>every</b> question — including the ones you got right by guessing. Those are the dangerous ones.</p>
+        <span class="dcost">cost: $0</span>
+      </div></div>
+
+      <div class="day"><div class="dnum">28</div><div class="dbody">
+        <h5>Gap filling</h5>
+        <p class="dbuild">Rebuild or re-read only what exam 1 showed was missing. Nothing else.</p>
+        <span class="dcost">cost: varies</span>
+      </div></div>
+
+      <div class="day"><div class="dnum">29</div><div class="dbody">
+        <h5>Practice exam 2, and weak areas</h5>
+        <p class="dbuild">Second attempt, full review, then targeted work on whatever is still shaky.</p>
+        <span class="dcost">cost: $0</span>
+      </div></div>
+
+      <div class="day"><div class="dnum">30</div><div class="dbody">
+        <h5>Practice exam 3, and the decision</h5>
+        <p class="dbuild">Final attempt. If the scores hold up, book the exam. If not, you still have the skill — and you will know exactly what is missing.</p>
+        <span class="dcost">cost: $0</span>
+      </div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>How each day runs</h2>
+    <p class="sub">The same five steps every time. Step three is where the
+    understanding actually forms.</p>
+
+    <div class="steps">
+      <div class="step"><div><b>Concept first</b><p>What problem does this service solve? 20–30 minutes, before any clicking.</p></div></div>
+      <div class="step"><div><b>Build it</b><p>Console first to understand it, CLI second to repeat it. Most of the time goes here.</p></div></div>
+      <div class="step"><div><b>Break it</b><p>Remove a permission, kill an instance, block a port. Read the error. Anyone can follow a tutorial; reading the failure is the skill.</p></div></div>
+      <div class="step"><div><b>Tear it down</b><p>Same day, without exception.</p></div></div>
+      <div class="step"><div><b>Record it</b><p>Notes to <code>docs/</code>, commands to <code>reference/cheatsheets/</code>, questions to <code>recall/</code>.</p></div></div>
+    </div>
+
+    <div class="callout">
+      <p class="big">On videos</p>
+      <p>Welcome as a <em>second</em> explanation, after you have built the
+      thing. Not before — video makes you feel you understand something you
+      have not done, and that feeling is hard to tell apart from the real
+      thing until an exam question asks you to choose.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>The networking work</h2>
+    <p class="sub">Parked, not deleted — and it is a real head start.</p>
+
+    <dl class="vocab">
+      <div class="vrow"><dt>subnets, /20 vs /32</dt><dd>VPC subnet design — day 3</dd></div>
+      <div class="vrow"><dt>routing tables, via or direct</dt><dd>VPC route tables — day 3</dd></div>
+      <div class="vrow"><dt>ports, the TCP handshake</dt><dd>security group rules — day 4</dd></div>
+      <div class="vrow"><dt>packets, DNS, TTL</dt><dd>Route 53 and VPC DNS — day 13</dd></div>
+    </dl>
+
+    <p style="margin-top:16px">Most people find VPC the hardest part of AWS,
+    because they meet subnets and routing for the first time while also
+    learning a console. You have already done the hard half.
+    <a href="phase-0.html">Phase 0 is still here</a>.</p>
+  </section>
+
+</main>
+
+<footer class="wrap foot">
+  <span>30 days · ~99 hours · AWS Solutions Architect Associate level</span>
+  <span class="muted">Plan: <code>docs/superpowers/specs/</code></span>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+  var THEME = "netcurriculum.theme";
+  try {
+    var saved = localStorage.getItem(THEME);
+    if (saved) document.documentElement.dataset.theme = saved;
+  } catch (e) { /* storage may be blocked; the page still works */ }
+  document.getElementById("theme").addEventListener("click", function () {
+    var next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+    document.documentElement.dataset.theme = next;
+    try { localStorage.setItem(THEME, next); } catch (e) { /* ignore */ }
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,50 +1,55 @@
-# Networking and Linux, from first principles
+# AWS Solutions Architect, in 30 days
 
-A four-month, 83-module curriculum taking networking and Linux from nothing
-to production DevOps depth. Built to be learned once.
+A 30-day, 99-hour plan reaching Solutions Architect Associate level by
+building rather than reading. The certificate is a checkpoint near day 30,
+not the point.
 
-**Goal: conceptual clarity, not coverage.** The test of a finished module is
-whether you can explain the mechanism to someone else without notes,
-including why it was designed that way and how it fails.
+**Goal: be able to choose and defend an architecture** — not recall service
+names.
 
 ## Start here
 
-1. Read [PROGRESS.md](PROGRESS.md) — every module, in study order.
-2. Open `site/index.html` in a browser, or run `bash tools/serve.sh`.
-3. Begin with `docs/phase-0-map/`.
+1. Open `site/plan.html` — the full plan: what you build each day, and what
+   every lab costs.
+2. Track days in [PROGRESS.md](PROGRESS.md).
+3. Begin with `docs/week-1-foundations/`.
 
-## How a session works
+## How a day works
 
-1. Say "next module", or name one.
-2. The module doc is written to `docs/<phase-slug>/`, and taught in
-   conversation with concrete examples. Interrupt with "go deeper" whenever
-   you want to dig.
-3. Run the lab in WSL. Breaking it is part of the lab.
-4. Recall questions are added to `recall/`; `PROGRESS.md` is ticked.
-5. Roughly once a phase, that phase's interactive page gets built.
+1. **Concept** — what problem the service solves, before any clicking. 20–30 min.
+2. **Build** — console first to understand, CLI second to repeat. Most of the time.
+3. **Break** — remove a permission, kill an instance, block a port. Read the error.
+4. **Tear down** — same day, without exception.
+5. **Record** — notes, cheatsheet, recall questions; tick `PROGRESS.md`.
+
+Video is welcome as a *second* explanation, after building. Not before.
 
 ## Layout
 
 | Path | What it holds |
 |---|---|
-| `docs/` | Module notes. **Source of truth.** Read these in your editor. |
+| `docs/week-*/` | Day notes. **Source of truth.** Read these in your editor. |
+| `docs/phase-0-map/` | The networking work. Parked, intact, feeds week 1. |
 | `labs/` | Runnable labs. Each has `setup.sh`, `verify.sh`, `teardown.sh`. |
-| `site/` | Interactive diagrams. A companion to the docs, not a copy of them. |
-| `reference/` | Glossary, cheatsheets, curated RFC list. |
-| `recall/` | Active-recall questions per phase. |
+| `site/` | `plan.html` is the plan; the rest are interactive companions. |
+| `reference/` | Cheatsheets and glossary, grown as commands are used. |
+| `recall/` | Active-recall questions. |
 | `tools/` | Generator, verifier, lab scaffolder, local server. |
 
-## Every module has the same five parts
+## Money
 
-1. **The problem** — what breaks without this. Motivation before mechanism.
-2. **The mechanism** — how it works, to byte level where that matters.
-3. **The lab** — build it, then deliberately break it.
-4. **Why is it like this** — the trade-off or historical accident behind it.
-5. **Failure modes and recall questions.**
+Free tier is not free. A forgotten NAT Gateway is ~$32/month, an ALB ~$16.
+
+1. Budget alarm at $5 before creating anything.
+2. Every lab torn down the same day.
+3. Billing console checked every Monday.
+
+`site/plan.html` states the cost risk for each day.
 
 ## Labs
 
-Labs run in **WSL2 Ubuntu** or Docker, never against the Windows host network.
+AWS labs run in the console and CLI. The parked networking labs run in
+**WSL2 Ubuntu**, never against the Windows host network.
 
 ```bash
 cd labs/<phase-slug>/<lab-name>
@@ -67,22 +72,23 @@ bash tools/serve.sh             # serve site/ at http://localhost:8080
 
 ## Design decisions worth remembering
 
-- **Order:** trace one request end to end first (Phase 0), then rigorous
-  bottom-up, then re-trace the same request at the end explaining every byte.
-- **Linux is split in two.** L1 before Phase 1 (terminal competence, file
-  descriptors). L2 before Phase 6 (kernel depth, cgroups, namespaces) so it
-  is applied within days, not months.
-- **No Cisco, no CCNA.** Concepts are vendor-neutral, practised on Linux and
-  FRR. Vendor syntax is a lookup, not a competency. Deliberate choice.
+- **Two tiers.** ~25 services get built by hand; ~30 are only ever chosen
+  correctly. Attempting hands-on across all of AWS is why one-month attempts
+  collapse.
+- **One architecture, grown weekly** — not thirty disconnected tutorials.
+- **Practice questions in week 4 only.** Earlier, they test recall of
+  material not yet built.
 - **Markdown is the source of truth.** The site shows mechanisms moving; it
   never duplicates prose.
+- **The networking curriculum is parked, not deleted.** Subnets, route
+  tables and ports map straight onto VPC — the hardest part of AWS for most
+  people, already half done.
 
-Full reasoning: [design spec](docs/superpowers/specs/2026-09-20-networking-curriculum-design.md)
+Full reasoning: [design spec](docs/superpowers/specs/2026-10-21-aws-saa-30-day-design.md)
+Parked plan: [networking spec](docs/superpowers/specs/2026-09-20-networking-curriculum-design.md)
 
-## Scope
+## Out of scope
 
-This is project 1 of an expected 3. It covers networking and Linux in depth,
-plus the networking slice of containers, Kubernetes and cloud. It does not
-cover Terraform, CI/CD, Kubernetes operations, observability stacks, or AWS
-breadth such as IAM. Those come later, and are faster to learn from this
-foundation.
+Terraform and infrastructure as code, CI/CD, Kubernetes operations, and
+observability platforms beyond CloudWatch. Console and CLI only, so attention
+stays on the services themselves. IaC is the natural next project.
