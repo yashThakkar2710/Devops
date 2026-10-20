@@ -11,9 +11,9 @@ Updated at the end of each day.
 
 | | |
 |---|---|
-| **Day** | 1 of 30 |
-| **Last completed** | nothing yet — starting day 1 |
-| **Next** | `01-01` Account safety and the IAM model |
+| **Day** | 1 of 30 complete |
+| **Last completed** | `01-01` Account safety and the IAM model |
+| **Next** | `01-02` IAM in depth — policies, roles, trust |
 | **Started** | 2026-10-21 |
 | **Target** | AWS Solutions Architect Associate level by ~2026-11-20 |
 
@@ -171,4 +171,39 @@ route tables → VPC route tables (day 3); ports and TCP → security groups
 | Day | Module | Done | Notes |
 |---|---|---|---|
 | — | `00-01` journey of a request (parked curriculum) | 2026-09-21 | Full packet capture read end to end |
-| 1 | `01-01` Account safety and the IAM model | in progress | |
+| 1 | `01-01` Account safety and the IAM model | 2026-10-21 | Account secured end to end. See AWS account state below. |
+
+---
+
+## AWS account state
+
+Carry this forward — it is what exists in the account right now.
+
+| | |
+|---|---|
+| Account | `yash2710` · id `639679388494` |
+| Plan | **free plan** with credits — cannot currently be charged |
+| Credits | $100, expiring Apr 2027. $100 more available, $20 per activity |
+| **Region** | **`ap-south-1` (Mumbai)** — use this for everything |
+| Sign-in | `https://<account-id>.signin.aws.amazon.com/console` as `yash-admin` |
+
+Built so far:
+
+```
+root           MFA on, zero access keys, not used for daily work
+yash-admin     IAM user, MFA on, no access keys, in group Admins
+Admins         group with AdministratorAccess
+zero-spend-alert   budget, emails on any charge over $0.01
+CloudTrail     Event history on by default, 90 days, free. No trail created.
+default VPC    created automatically by AWS - ignored, we build our own on day 3
+```
+
+Credit activities remaining: EC2 instance (day 5), RDS/Aurora (day 10),
+Lambda web app (day 15), Bedrock model (not in plan — 10 min, worth taking).
+Cost budget already claimed.
+
+**Known quirks on this account:**
+- Cost Explorer forecast showed *access denied* on day 1 — needs up to 24h
+  to activate on a new account. Recheck.
+- Billing access for IAM users was already active; newer accounts ship that
+  way. Confirmed by testing rather than hunting for the setting.

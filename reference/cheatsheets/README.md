@@ -98,3 +98,42 @@ The dot means ACK.
 | `[P.]` | PUSH — actual content |
 | `[F.]` | FIN — "I'm finished" |
 | `[R]` | RST — "no, stop" |
+
+---
+
+## AWS console — from day 01-01
+
+| Where | What |
+|---|---|
+| top-right account menu → Security credentials | root MFA and access keys |
+| top-right region selector | **check this before creating anything** |
+| Billing and Cost Management → Budgets | cost alerts |
+| IAM → Users / User groups / Policies | identities and permissions |
+| CloudTrail → Event history | who did what, last 90 days, free |
+
+**Sign-in URL** (not the root email page):
+```
+https://<account-id>.signin.aws.amazon.com/console
+```
+
+**Traps that cost real time:**
+
+```
+resource "missing"        → wrong region. It is still running and billing.
+CloudTrail event missing  → wrong region. IAM is global, logs to us-east-1.
+billing access denied     → separate switch from admin rights.
+console path not found    → menus move; the direct URL usually survives.
+```
+
+**Reading an ARN:**
+```
+arn : aws : service : region : account : resource
+                        ↑
+            empty for global services such as IAM
+```
+
+**Budget reality:**
+```
+a budget alerts. it never stops spending. data lags up to 24h.
+the real protection is tearing down every lab the same day.
+```
