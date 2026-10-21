@@ -11,9 +11,9 @@ Updated at the end of each day.
 
 | | |
 |---|---|
-| **Day** | 1 of 30 complete |
-| **Last completed** | `01-01` Account safety and the IAM model |
-| **Next** | `01-02` IAM in depth — policies, roles, trust, **MFA enforcement**, **budget actions** |
+| **Day** | 2 of 30 complete |
+| **Last completed** | `01-02` IAM in depth |
+| **Next** | `01-03` A VPC from scratch — subnets, route tables, IGW |
 | **Started** | 2026-10-21 |
 | **Target** | AWS Solutions Architect Associate level by ~2026-11-20 |
 
@@ -180,6 +180,7 @@ route tables → VPC route tables (day 3); ports and TCP → security groups
 |---|---|---|---|
 | — | `00-01` journey of a request (parked curriculum) | 2026-09-21 | Full packet capture read end to end |
 | 1 | `01-01` Account safety and the IAM model | 2026-10-21 | Account secured end to end. See AWS account state below. |
+| 2 | `01-02` IAM in depth | 2026-10-22 | Policies, roles, MFA enforcement, budget breaker. All tested, not assumed. |
 
 ---
 
@@ -198,13 +199,26 @@ Carry this forward — it is what exists in the account right now.
 Built so far:
 
 ```
-root           MFA on, zero access keys, not used for daily work
-yash-admin     IAM user, MFA on, no access keys, in group Admins
-Admins         group with AdministratorAccess
-zero-spend-alert   budget, emails on any charge over $0.01
-CloudTrail     Event history on by default, 90 days, free. No trail created.
-default VPC    created automatically by AWS - ignored, we build our own on day 3
+root                 MFA on (authenticator app + laptop passkey), zero access keys
+yash-admin           IAM user, MFA on, no access keys, in group Admins
+Admins               group: AdministratorAccess + EnforceMFA
+EnforceMFA           customer policy. Deny all unless MFA, NotAction carve-out,
+                     BoolIfExists. TESTED with a throwaway user, then deleted.
+S3ReadOnlyRole       role, trust policy requires MFA, AmazonS3ReadOnlyAccess
+BudgetBreaker-DenyExpensiveCreation
+                     customer policy. Denies RunInstances, CreateNatGateway,
+                     CreateDBInstance, CreateLoadBalancer etc.
+                     NO Terminate/Delete/Describe - deliberately.
+AWSBudgetsActionRole service role, principal budgets.amazonaws.com
+zero-spend-alert     budget, emails over $0.01, AUTOMATIC action attaching
+                     BudgetBreaker to the Admins group
+CloudTrail           Event history on by default, 90 days, free. No trail.
+default VPC          created automatically by AWS - ignored, we build our own day 3
 ```
+
+**If the budget breaker ever fires** and you cannot create resources: detach
+`BudgetBreaker-DenyExpensiveCreation` from the `Admins` group in IAM. You
+can still delete things while it is attached — that was the design.
 
 Credit activities remaining: EC2 instance (day 5), RDS/Aurora (day 10),
 Lambda web app (day 15), Bedrock model (not in plan — 10 min, worth taking).

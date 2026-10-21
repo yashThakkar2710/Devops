@@ -1,0 +1,646 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 2 · IAM in depth</title>
+<link rel="stylesheet" href="assets/site.css">
+<style>
+  :root {
+    --deny:  #f85149;
+    --allow: #3fb950;
+    --imp:   #6e7681;
+    --warn:  #f0883e;
+    --cool:  #a371f7;
+  }
+  :root[data-theme="light"] {
+    --deny:  #cf222e;
+    --allow: #1a7f37;
+    --imp:   #6e7681;
+    --warn:  #bc4c00;
+    --cool:  #8250df;
+  }
+
+  .crumb { padding: 20px 0 0; font-size: 13px; }
+  .crumb a { color: var(--accent); text-decoration: none; }
+  .crumb a:hover { text-decoration: underline; }
+
+  .lede { padding: 20px 0 8px; max-width: 66ch; }
+  .lede .eyebrow { font-family: var(--mono); font-size: 12px; color: var(--ink-faint); margin: 0 0 6px; }
+  .lede h1 { margin: 0 0 10px; font-size: 27px; letter-spacing: -.02em; }
+  .lede p { margin: 0; color: var(--ink-dim); }
+
+  section { padding: 32px 0; border-top: 1px solid var(--line); }
+  section > h2 { margin: 0 0 6px; font-size: 18px; letter-spacing: -.01em; }
+  section > .sub { margin: 0 0 20px; color: var(--ink-dim); font-size: 14px; max-width: 66ch; }
+  h3.minor { margin: 26px 0 10px; font-size: 15px; }
+  p { max-width: 66ch; }
+
+  pre.box {
+    font-family: var(--mono); font-size: 12.5px; line-height: 1.65;
+    background: var(--panel-2); border: 1px solid var(--line-soft);
+    border-radius: 7px; padding: 13px; margin: 14px 0;
+    overflow-x: auto; color: var(--ink-dim);
+  }
+  pre.box .dim  { color: var(--ink-faint); }
+  pre.box .bad  { color: var(--deny); }
+  pre.box .good { color: var(--allow); }
+  pre.box .hi   { color: var(--warn); }
+  pre.box .cl   { color: var(--cool); }
+
+  /* policy statement decoder */
+  .polbox { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; }
+  .pol { font-family: var(--mono); font-size: 13.5px; line-height: 2; }
+  .pline { display: block; white-space: pre; }
+  .pseg {
+    cursor: pointer; border: 0; background: transparent; font: inherit;
+    color: var(--c); padding: 1px 5px; border-bottom: 2px solid var(--c);
+    border-radius: 3px 3px 0 0;
+  }
+  .pseg:hover, .pseg:focus-visible { background: color-mix(in srgb, var(--c) 18%, transparent); }
+  .pseg[aria-pressed="true"] { background: color-mix(in srgb, var(--c) 28%, transparent); }
+  .pseg:focus-visible { outline: 2px solid var(--c); outline-offset: 1px; }
+  .pout { margin-top: 16px; border-left: 3px solid var(--c, var(--line)); padding-left: 15px; min-height: 60px; }
+  .pout b { display: block; margin-bottom: 4px; color: var(--c, var(--ink)); }
+  .pout span { font-size: 13.5px; color: var(--ink-dim); }
+
+  /* evaluation simulator */
+  .sim { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; }
+  .simrow { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .toggle {
+    font: inherit; font-size: 13px; padding: 8px 13px; cursor: pointer;
+    background: var(--panel-2); color: var(--ink-dim);
+    border: 1px solid var(--line); border-radius: 7px; text-align: left;
+  }
+  .toggle[aria-pressed="true"] { color: var(--ink); }
+  .toggle.allow[aria-pressed="true"] { border-color: color-mix(in srgb, var(--allow) 55%, var(--line)); background: color-mix(in srgb, var(--allow) 15%, transparent); }
+  .toggle.deny[aria-pressed="true"]  { border-color: color-mix(in srgb, var(--deny) 55%, var(--line));  background: color-mix(in srgb, var(--deny) 15%, transparent); }
+  .toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .toggle small { display: block; font-size: 11.5px; color: var(--ink-faint); margin-top: 2px; }
+  .verdict2 {
+    border-radius: 8px; padding: 14px 16px; border: 1px solid var(--line);
+    background: var(--panel-2);
+  }
+  .verdict2 b { display: block; font-family: var(--mono); font-size: 16px; margin-bottom: 4px; }
+  .verdict2 span { font-size: 13.5px; color: var(--ink-dim); }
+  .verdict2.ok   b { color: var(--allow); }
+  .verdict2.no   b { color: var(--deny); }
+  .verdict2.imp  b { color: var(--imp); }
+
+  /* user vs role */
+  .vs { display: grid; grid-template-columns: repeat(auto-fit, minmax(265px, 1fr)); gap: 14px; margin: 18px 0; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; }
+  .card h4 { margin: 0 0 3px; font-size: 15px; font-family: var(--mono); }
+  .card .when { margin: 0 0 12px; font-size: 12.5px; color: var(--ink-faint); }
+  .card ul { margin: 0; padding-left: 17px; font-size: 13.5px; color: var(--ink-dim); }
+  .card li { margin-bottom: 5px; }
+  .card.u h4 { color: var(--accent); }
+  .card.r h4 { color: var(--cool); }
+  .card.r { border-color: color-mix(in srgb, var(--cool) 42%, var(--line)); }
+
+  .callout {
+    margin: 18px 0; padding: 15px 17px; border-radius: var(--radius);
+    background: color-mix(in srgb, var(--warn) 10%, var(--panel));
+    border: 1px solid color-mix(in srgb, var(--warn) 38%, var(--line));
+  }
+  .callout p { margin: 0; }
+  .callout .big { font-size: 15.5px; font-weight: 600; margin-bottom: 4px; }
+
+  .done { border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+  .drow { display: grid; grid-template-columns: 3ch 1fr; gap: 12px; padding: 9px 14px; font-size: 13.5px; border-bottom: 1px solid var(--line-soft); }
+  .drow:last-child { border-bottom: 0; }
+  .drow span:first-child { color: var(--allow); }
+  .drow.x span:first-child { color: var(--deny); }
+
+  .vocab { display: grid; }
+  .vrow { display: grid; grid-template-columns: 18ch 1fr; gap: 16px; padding: 10px 0; border-bottom: 1px solid var(--line-soft); }
+  .vrow:last-child { border-bottom: 0; }
+  .vrow dt { font-size: 13.5px; color: var(--accent); font-family: var(--mono); }
+  .vrow dd { margin: 0; font-size: 13.5px; color: var(--ink-dim); }
+
+  ol.qs { margin: 0; padding-left: 20px; }
+  ol.qs li { margin-bottom: 11px; font-size: 14px; max-width: 64ch; }
+
+  .foot { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+    border-top: 1px solid var(--line); padding-top: 16px; padding-bottom: 34px;
+    font-size: 12px; color: var(--ink-faint); }
+
+  @media (max-width: 620px) {
+    .vrow { grid-template-columns: 1fr; gap: 2px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <div class="brand"><span class="brand-mark">//</span><span>AWS in 30 days</span></div>
+    <div class="topbar-tools"><button id="theme" type="button" title="Toggle theme">◐</button></div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <p class="crumb"><a href="index.html">← Progress</a> · <a href="plan.html">The plan</a> · <a href="day-01.html">Day 1</a></p>
+
+  <div class="lede">
+    <p class="eyebrow">Week 1 · Day 2 · 01-02</p>
+    <h1>IAM in depth</h1>
+    <p>Every action in AWS passes through one question: <em>is this
+    allowed?</em> Nothing else answers it. Firewalls and networks come later
+    and protect different things — who may do what is entirely policies.</p>
+  </div>
+
+  <section>
+    <h2>A policy is a JSON file, and nothing more</h2>
+    <p class="sub">Here is the most powerful permission in AWS, in full.</p>
+
+    <pre class="box">{
+    "Version": "2012-10-17",
+    "Statement": [
+        { "Effect": "<span class="good">Allow</span>", "Action": "<span class="hi">*</span>", "Resource": "<span class="hi">*</span>" }
+    ]
+}</pre>
+
+    <p>That is <code>AdministratorAccess</code>. Five meaningful lines, no
+    special status. It is powerful only because <code>*</code> means
+    everything.</p>
+
+    <h3 class="minor">The four parts — click each one</h3>
+
+    <div class="polbox">
+      <div class="pol" id="pol"></div>
+      <div class="pout" id="pout">
+        <b>Pick a part</b>
+        <span>Click any coloured key above.</span>
+      </div>
+    </div>
+
+    <p style="margin-top:16px">Read it as a sentence: <em>allow the action
+    s3:GetObject on my-bucket/*, if the conditions hold.</em> Actions are
+    <code>service:Operation</code>. Resources are ARNs — which is why day 1
+    spent time on them. <strong>Policies are built out of ARNs.</strong></p>
+  </section>
+
+  <section>
+    <h2>The bucket and the papers inside it</h2>
+    <p class="sub">The most common S3 permission bug, and it looks correct
+    in the console.</p>
+
+    <pre class="box">arn:aws:s3:::company-reports        <span class="dim">the bucket itself</span>
+arn:aws:s3:::company-reports/*      <span class="dim">every object inside it</span>
+                            <span class="hi">↑</span>
+                        <span class="hi">this slash matters</span></pre>
+
+    <p>A filing cabinet and the papers in it. <em>Listing the cabinet</em>
+    is an action on the cabinet. <em>Reading a paper</em> is an action on
+    the paper.</p>
+
+    <pre class="box">s3:GetObject   on company-reports/*   <span class="good">✓ correct</span>
+s3:ListBucket  on company-reports/*   <span class="bad">✗ silently grants nothing</span></pre>
+
+    <p>The second one is listed, looks fine, and does nothing — because
+    <code>ListBucket</code> acts on the bucket ARN, which has no
+    <code>/*</code>. The result: someone who can download a file whose name
+    they know, but cannot see what exists.</p>
+
+    <h3 class="minor">A rule of thumb that works</h3>
+    <pre class="box">action name contains <span class="cl">Object</span>  →  the paper   →  needs <span class="hi">/*</span>
+action name contains <span class="cl">Bucket</span>  →  the cabinet →  <span class="hi">no</span> /*</pre>
+    <p><code>ListBucket</code> has "Bucket" in the name. That is the clue.</p>
+
+    <h3 class="minor">But withholding ListBucket is often the point</h3>
+    <div class="done">
+      <div class="drow"><span>→</span><span><code>GetObject</code> only — a thief fetches files whose names they can guess</span></div>
+      <div class="drow x"><span>→</span><span><code>GetObject</code> + <code>ListBucket</code> — a thief enumerates everything, then downloads all of it</span></div>
+    </div>
+    <p style="margin-top:14px">An app fetching <code>avatars/user-12345.jpg</code>
+    builds that key itself and never browses. Giving it
+    <code>ListBucket</code> turns a small breach into a total one.</p>
+    <div class="callout">
+      <p class="big">Listing is the permission that turns "I can read a file" into "I can read everything."</p>
+      <p>Ask of every policy: does this thing need to look around, or does
+      it already know what it wants? That is most of what least privilege
+      means in practice.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Three states, and which one wins</h2>
+    <p class="sub">Toggle the policies and watch the verdict.</p>
+
+    <div class="sim">
+      <div class="simrow" id="simrow"></div>
+      <div class="verdict2" id="verdict"></div>
+    </div>
+
+    <pre class="box">explicit Deny   <span class="bad">███████</span>  beats everything
+explicit Allow  <span class="good">████</span>
+implicit deny   <span class="dim">█</span>        the default</pre>
+
+    <p>Everything starts denied. Policies only ever add — a brand-new IAM
+    user with no policies can sign in and do literally nothing.</p>
+
+    <h3 class="minor">Why this matters: Deny is the only subtraction</h3>
+    <pre class="box">Allow + Allow = more allowed      <span class="dim">there is no way to subtract</span></pre>
+    <p>You cannot enforce anything with <code>Allow</code>. Deny winning is
+    what lets <strong>one</strong> policy override every Allow in the
+    account at once, without editing any of them.</p>
+    <pre class="box"><span class="good">Allow</span>  →  "here is what you CAN do"       <span class="dim">permissions</span>
+<span class="bad">Deny</span>   →  "here is what NOBODY may do"    <span class="dim">guardrails</span></pre>
+    <p>Teams hand out Allow freely. Security writes a handful of Deny
+    policies nobody can escape. Two different jobs — and only the second one
+    needs Deny.</p>
+  </section>
+
+  <section>
+    <h2>Making MFA compulsory</h2>
+    <p class="sub">The guardrail pattern, built and tested on this account.</p>
+
+    <pre class="box">{
+    "Effect": "<span class="bad">Deny</span>",
+    "<span class="cl">NotAction</span>": [ "iam:CreateVirtualMFADevice", "iam:EnableMFADevice",
+                   "iam:GetUser", "iam:ListMFADevices", ... ],
+    "Resource": "*",
+    "Condition": {
+        "<span class="hi">BoolIfExists</span>": { "aws:MultiFactorAuthPresent": "false" }
+    }
+}</pre>
+
+    <h3 class="minor">NotAction — the inverse</h3>
+    <pre class="box">Action     →  deny THESE things
+NotAction  →  deny EVERYTHING EXCEPT these things</pre>
+    <p>So: deny everything except the MFA-setup calls, whenever MFA is
+    absent. <strong>That carve-out is the lockout trap avoided</strong> —
+    without it, a user with no MFA could never add MFA and would be stuck
+    permanently.</p>
+
+    <h3 class="minor">BoolIfExists, not Bool</h3>
+    <p>The key <code>aws:MultiFactorAuthPresent</code> has three states, not
+    two:</p>
+    <pre class="box">true     <span class="dim">signed in with MFA</span>
+false    <span class="dim">signed in without MFA</span>
+MISSING  <span class="bad">no label at all — this is what an access key looks like</span></pre>
+    <pre class="box"><span class="bad">Bool</span>          deny if the label says false
+              → a request with NO label is never matched → <span class="bad">walks through</span>
+<span class="good">BoolIfExists</span>  deny if it says false, OR if there is no label → <span class="good">closed</span></pre>
+    <div class="callout">
+      <p class="big">One word, and the policy looks identical in the console.</p>
+      <p>Plain <code>Bool</code> leaves access keys — the most common path
+      into a compromised account — completely unaffected. It blocks the safe
+      route and leaves the dangerous one open. That is the difference
+      between enforcement and theatre.</p>
+    </div>
+
+    <h3 class="minor">A policy variable</h3>
+    <pre class="box">"Resource": "arn:aws:iam::*:mfa/<span class="cl">${aws:username}</span>"</pre>
+    <p>AWS substitutes whoever is calling. One policy, and everyone can
+    manage only their own MFA. Without it, "let people manage MFA" would
+    mean "let anyone remove anyone's MFA".</p>
+
+    <h3 class="minor">The test that failed first</h3>
+    <p>A throwaway <code>mfa-test</code> user was given <em>both</em>
+    <code>AdministratorAccess</code> and <code>EnforceMFA</code>, with no
+    MFA device. On the first attempt it <strong>created an S3 bucket
+    successfully.</strong></p>
+    <pre class="box">create policy   <span class="dim">a JSON document exists somewhere</span>
+attach policy   <span class="good">it begins affecting someone</span></pre>
+    <div class="callout">
+      <p class="big">A correct security policy sat in the account doing nothing.</p>
+      <p>That gap is where real breaches live — the policy is written, it
+      appears in the list, the audit is ticked, and nothing is enforced.
+      Testing found it in thirty seconds. Assuming would never have found
+      it.</p>
+    </div>
+    <p>Once attached, the same user was refused: <em>"You don't have
+    permission to delete bucket."</em> A full administrator, blocked.
+    <strong>Deny beat Allow, in front of you.</strong></p>
+  </section>
+
+  <section>
+    <h2>Roles: a costume, not a person</h2>
+
+    <div class="vs">
+      <div class="card u">
+        <h4>user</h4>
+        <p class="when">permanent identity</p>
+        <ul>
+          <li>Is a person</li>
+          <li>Has a password</li>
+          <li>May have access keys</li>
+          <li>You <strong>are</strong> it</li>
+        </ul>
+      </div>
+      <div class="card r">
+        <h4>role</h4>
+        <p class="when">worn temporarily</p>
+        <ul>
+          <li>Is a set of permissions</li>
+          <li><strong>Has no credentials at all</strong></li>
+          <li>Assumed, then given back</li>
+          <li>You <strong>become</strong> it, for a while</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3 class="minor">A role has two policies — the second is unique to roles</h3>
+    <pre class="box"><span class="cl">trust policy</span>        WHO may assume it      <span class="dim">← only roles have this</span>
+<span class="good">permissions policy</span>  WHAT they can do then</pre>
+    <p>Both must say yes. The trust policy introduces a part no identity
+    policy needs — <strong><code>Principal</code></strong> — because an
+    identity policy is already attached to an identity, while a role must
+    name who may become it.</p>
+
+    <pre class="box">{
+  "Effect": "Allow",
+  "<span class="cl">Principal</span>": { "Service": "budgets.amazonaws.com" },
+  "Action": "sts:AssumeRole"
+}</pre>
+    <p>The five trusted-entity choices in the console are just five shapes
+    of <code>Principal</code>: an AWS service, another account, a web
+    identity, a SAML directory, or hand-written JSON.</p>
+
+    <h3 class="minor">Why roles replaced access keys</h3>
+    <pre class="box">the old way:  /home/app/.aws/credentials
+              aws_access_key_id = AKIA...</pre>
+    <div class="done">
+      <div class="drow x"><span>✗</span><span>Never expires — valid forever once stolen</span></div>
+      <div class="drow x"><span>✗</span><span>Works from anywhere — a thief uses it from their own laptop</span></div>
+      <div class="drow x"><span>✗</span><span>Rotating means touching every server, so nobody rotates</span></div>
+      <div class="drow x"><span>✗</span><span>Copying it leaves no trace</span></div>
+    </div>
+    <p style="margin-top:14px">With a role, the instance asks AWS, AWS checks
+    the trust policy, and issues <strong>temporary</strong> credentials that
+    rotate automatically. Nothing is stored on disk. A compromised instance
+    leaks something that expires in hours and only does what the role
+    allows.</p>
+    <div class="callout">
+      <p class="big">Access keys are the old way. Roles are how AWS is actually built.</p>
+      <p>In a well-run account almost nothing has access keys — which is why
+      root and <code>yash-admin</code> both have zero.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Assuming a role replaces your permissions</h2>
+    <p class="sub">Observed directly, and it surprises almost everyone.</p>
+
+    <pre class="box">yash-admin                   <span class="good">can do everything</span>
+yash-admin wearing the role  <span class="bad">can only read S3</span></pre>
+
+    <p>An administrator assumed <code>S3ReadOnlyRole</code> and was then
+    refused by EC2. <strong>You do not carry your own permissions into the
+    role.</strong> While wearing it, you are only it.</p>
+
+    <pre class="box">User: arn:aws:<span class="hi">sts</span>::639679388494:<span class="cl">assumed-role/S3ReadOnlyRole/yash-admin</span>
+      is not authorized to perform: ec2:DescribeInstances
+      <span class="dim">because no identity-based policy allows it</span></pre>
+
+    <pre class="box">arn : aws : <span class="hi">sts</span> :: 639679388494 : <span class="cl">assumed-role/S3ReadOnlyRole/yash-admin</span>
+             <span class="hi">│</span>                            <span class="cl">│</span>                  <span class="cl">│</span>
+             <span class="hi">│</span>                            <span class="cl">│</span>                  <span class="cl">└─ who is wearing it</span>
+             <span class="hi">│</span>                            <span class="cl">└─ which costume</span>
+             <span class="hi">└─ NOT iam. STS issues temporary credentials.</span></pre>
+
+    <p>The ARN names both the role and the person, which is how CloudTrail
+    can still attribute the action to you.</p>
+
+    <h3 class="minor">Two kinds of denial, needing opposite fixes</h3>
+    <pre class="box"><span class="dim">"no identity-based policy allows"</span>  →  implicit deny. <span class="good">You are missing an Allow.</span>
+<span class="dim">"explicit deny in a policy"</span>        →  something is <span class="bad">actively blocking you.</span></pre>
+    <p>Adding permissions will never help against an explicit Deny. Reading
+    that one line tells you which problem you have.</p>
+
+    <p>This is why mature AWS shops do not let anyone hold admin all day: a
+    narrow role for routine work, a deliberate switch to a powerful one for
+    the few minutes it is needed, then back. Smaller blast radius, and every
+    assumption shows up in CloudTrail as a deliberate act.</p>
+  </section>
+
+  <section>
+    <h2>The circuit breaker</h2>
+    <p class="sub">A budget alert emails you. A budget <em>action</em> does
+    something — with no human involved.</p>
+
+    <h3 class="minor">The design decision matters more than the wiring</h3>
+    <p>The obvious policy is wrong:</p>
+    <pre class="box">{ "Effect": "Deny", "Action": "*", "Resource": "*" }   <span class="bad">← a trap</span></pre>
+    <p>If that fires, you also cannot <em>delete</em> the expensive thing.
+    The breaker locks you out of the cleanup while the bill keeps growing.</p>
+
+    <pre class="box"><span class="bad">deny creation</span>   <span class="dim">stop the bleeding</span>
+<span class="good">allow deletion</span>  <span class="dim">keep the scalpel</span></pre>
+
+    <p>Built here: a Deny on <code>ec2:RunInstances</code>,
+    <code>ec2:CreateNatGateway</code>, <code>rds:CreateDBInstance</code>,
+    <code>elasticloadbalancing:CreateLoadBalancer</code> and similar — with
+    no <code>Terminate</code>, <code>Delete</code> or <code>Describe</code>
+    anywhere in it.</p>
+
+    <div class="callout">
+      <p class="big">A blunt guardrail must be manual, so it never fires. A precise one can be automatic, so it actually works.</p>
+      <p>A deny-everything breaker is too dangerous to auto-run, so it gets
+      set to "require approval" — so it never fires at 3am, so it does not
+      protect against the one scenario it exists for. Precision is not
+      elegance here; it is what lets you turn the thing on.</p>
+    </div>
+
+    <p>AWS Budgets needed its own role to act on your behalf — trust policy
+    principal <code>budgets.amazonaws.com</code>. The first place roles
+    stopped being theory.</p>
+  </section>
+
+  <section>
+    <h2>What exists now</h2>
+    <div class="done">
+      <div class="drow"><span>✓</span><span><code>EnforceMFA</code> policy, attached to the <code>Admins</code> group</span></div>
+      <div class="drow"><span>✓</span><span>Tested with a throwaway <code>mfa-test</code> user — then deleted</span></div>
+      <div class="drow"><span>✓</span><span><code>S3ReadOnlyRole</code>, trust policy requiring MFA</span></div>
+      <div class="drow"><span>✓</span><span>Assumed it and confirmed admin rights do not carry over</span></div>
+      <div class="drow"><span>✓</span><span><code>BudgetBreaker-DenyExpensiveCreation</code> policy</span></div>
+      <div class="drow"><span>✓</span><span><code>AWSBudgetsActionRole</code> — a service role</span></div>
+      <div class="drow"><span>✓</span><span>Budget action wired, <strong>automatic</strong>, targeting <code>Admins</code></span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Words you now own</h2>
+    <dl class="vocab">
+      <div class="vrow"><dt>statement</dt><dd>One rule in a policy: Effect, Action, Resource, Condition.</dd></div>
+      <div class="vrow"><dt>implicit deny</dt><dd>The default. Nothing mentioned it, so it is denied.</dd></div>
+      <div class="vrow"><dt>explicit Deny</dt><dd>A policy actively said no. Beats every Allow.</dd></div>
+      <div class="vrow"><dt>NotAction</dt><dd>The inverse of Action — everything except these.</dd></div>
+      <div class="vrow"><dt>BoolIfExists</dt><dd>A condition that also matches when the key is absent.</dd></div>
+      <div class="vrow"><dt>${aws:username}</dt><dd>A policy variable. AWS substitutes the caller.</dd></div>
+      <div class="vrow"><dt>role</dt><dd>Permissions with no credentials, assumed temporarily.</dd></div>
+      <div class="vrow"><dt>trust policy</dt><dd>Who may assume a role. Only roles have one.</dd></div>
+      <div class="vrow"><dt>Principal</dt><dd>The "who" in a trust policy.</dd></div>
+      <div class="vrow"><dt>STS</dt><dd>The service that issues temporary credentials.</dd></div>
+      <div class="vrow"><dt>assumed-role ARN</dt><dd>Names both the role and the person wearing it.</dd></div>
+      <div class="vrow"><dt>budget action</dt><dd>A budget that does something, not just emails.</dd></div>
+      <div class="vrow"><dt>AWS managed policy</dt><dd>Written and updated by AWS. You cannot edit it.</dd></div>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Test yourself</h2>
+    <p class="sub">Answer before looking anything up.</p>
+    <ol class="qs">
+      <li>You hold <code>AdministratorAccess</code>. One more policy denies <code>s3:DeleteBucket</code>. Can you delete a bucket? Can you still terminate EC2 instances? Why?</li>
+      <li>Why can you not enforce a rule using only <code>Allow</code>?</li>
+      <li>A policy grants <code>s3:ListBucket</code> on <code>arn:aws:s3:::reports/*</code>. What can the holder actually do, and why?</li>
+      <li>Why might you deliberately grant <code>GetObject</code> without <code>ListBucket</code>?</li>
+      <li>Explain the difference between <code>Bool</code> and <code>BoolIfExists</code>, and which real-world credential the difference protects against.</li>
+      <li>Why does the MFA policy use <code>NotAction</code> rather than <code>Action</code>?</li>
+      <li>What would go wrong if the MFA policy had no carve-out at all?</li>
+      <li>Your first <code>mfa-test</code> run succeeded in creating a bucket. What was wrong, and what general lesson does that teach?</li>
+      <li>Name the two policies a role has, and say which one a user never needs.</li>
+      <li>You are an administrator. You assume a read-only role and EC2 refuses you. Why — and is that a bug?</li>
+      <li>Read this and say what it tells you:<br><code>arn:aws:sts::639679388494:assumed-role/S3ReadOnlyRole/yash-admin</code></li>
+      <li>Two denial messages: "no identity-based policy allows" and "explicit deny in a policy". What is different, and why do they need opposite fixes?</li>
+      <li>Why is a stolen role credential less dangerous than a stolen access key? Two reasons.</li>
+      <li>Why does a budget breaker that denies everything end up protecting you less than one that denies only creation?</li>
+      <li>Attaching a policy takes effect instantly, but MFA status does not change mid-session. Why are these different?</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>Carried forward</h2>
+    <dl class="vocab">
+      <div class="vrow"><dt>AWS service roles</dt><dd>Day 5 — a role letting EC2 read S3 with no keys on the server.</dd></div>
+      <div class="vrow"><dt>Service Control Policies</dt><dd>Day 25 — the same Deny mechanism, applied to whole accounts.</dd></div>
+      <div class="vrow"><dt>bucket policies</dt><dd>Day 6 — policies attached to the resource instead of the identity.</dd></div>
+      <div class="vrow"><dt>temporary credentials</dt><dd>Day 5 and everywhere after.</dd></div>
+    </dl>
+  </section>
+
+</main>
+
+<footer class="wrap foot">
+  <span>Day 2 of 30 · notes in <code>docs/week-1-foundations/</code></span>
+  <span class="muted"><a href="plan.html" style="color:inherit">The plan</a></span>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var THEME = "netcurriculum.theme";
+  try {
+    var saved = localStorage.getItem(THEME);
+    if (saved) document.documentElement.dataset.theme = saved;
+  } catch (e) { /* storage may be blocked; the page still works */ }
+  document.getElementById("theme").addEventListener("click", function () {
+    var next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+    document.documentElement.dataset.theme = next;
+    try { localStorage.setItem(THEME, next); } catch (e) { /* ignore */ }
+  });
+
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+
+  /* ---------- policy statement decoder ---------- */
+  var PARTS = [
+    { key: '"Effect"', val: '"Allow"', c: "#3fb950", title: "Effect — Allow or Deny",
+      body: "Only two possible values. Deny always beats Allow, which is what makes guardrails possible: one Deny can override every Allow in the account without editing any of them." },
+    { key: '"Action"', val: '"s3:GetObject"', c: "#4493f8", title: "Action — what may be done",
+      body: "Always service:Operation. s3:GetObject reads a file, ec2:TerminateInstances destroys a server, iam:CreateUser makes a user. A * here means every action in AWS." },
+    { key: '"Resource"', val: '"arn:aws:s3:::my-bucket/*"', c: "#d29922", title: "Resource — which things",
+      body: "An ARN, or a list of them. This is where day 1's work pays off: policies are built out of ARNs. The /* at the end matters — it means objects inside the bucket, not the bucket itself." },
+    { key: '"Condition"', val: '{ ... }', c: "#f0883e", title: "Condition — only if",
+      body: "Optional, and the part that turns a blunt rule into a precise one. It can test how you authenticated, where you came from, which region you asked about, or the time of day. Write one and you can write any of them." }
+  ];
+
+  var pol = document.getElementById("pol");
+  var pout = document.getElementById("pout");
+  var pcur = null;
+
+  pol.appendChild(el("span", "pline", "{"));
+  PARTS.forEach(function (p, i) {
+    var line = el("span", "pline");
+    line.appendChild(document.createTextNode("    "));
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "pseg";
+    b.style.setProperty("--c", p.c);
+    b.textContent = p.key;
+    b.setAttribute("aria-pressed", "false");
+    b.addEventListener("click", function () {
+      if (pcur) pcur.setAttribute("aria-pressed", "false");
+      pcur = b;
+      b.setAttribute("aria-pressed", "true");
+      pout.style.setProperty("--c", p.c);
+      pout.innerHTML = "";
+      pout.appendChild(el("b", null, p.title));
+      pout.appendChild(el("span", null, p.body));
+    });
+    line.appendChild(b);
+    line.appendChild(document.createTextNode(": " + p.val + (i < PARTS.length - 1 ? "," : "")));
+    pol.appendChild(line);
+  });
+  pol.appendChild(el("span", "pline", "}"));
+
+  /* ---------- evaluation simulator ----------
+     Two independent toggles, one verdict. The point is that Deny wins
+     whatever Allow says, and that "nothing said anything" is also a denial. */
+  var allowOn = true;
+  var denyOn = false;
+  var simrow = document.getElementById("simrow");
+  var verdict = document.getElementById("verdict");
+
+  function mkToggle(cls, label, hint, get, set) {
+    var b = el("button", "toggle " + cls);
+    b.type = "button";
+    b.appendChild(document.createTextNode(label));
+    b.appendChild(el("small", null, hint));
+    b.addEventListener("click", function () { set(!get()); draw(); });
+    simrow.appendChild(b);
+    return b;
+  }
+
+  var tAllow = mkToggle("allow", "AdministratorAccess",
+    'Allow "*" on "*"',
+    function () { return allowOn; },
+    function (v) { allowOn = v; });
+
+  var tDeny = mkToggle("deny", "Deny s3:DeleteBucket",
+    "an explicit Deny on one action",
+    function () { return denyOn; },
+    function (v) { denyOn = v; });
+
+  function draw() {
+    tAllow.setAttribute("aria-pressed", allowOn ? "true" : "false");
+    tDeny.setAttribute("aria-pressed", denyOn ? "true" : "false");
+
+    var cls, head, body;
+    if (denyOn) {
+      cls = "no";
+      head = "DENIED";
+      body = allowOn
+        ? "You hold AdministratorAccess, which allows everything — and it does not matter. An explicit Deny beats every Allow. This is the whole basis of guardrails."
+        : "Denied twice over: nothing allows it, and something explicitly forbids it.";
+    } else if (allowOn) {
+      cls = "ok";
+      head = "ALLOWED";
+      body = "An Allow matched and nothing denied it. Note that this is the only combination that permits anything — Allow is required, never assumed.";
+    } else {
+      cls = "imp";
+      head = "DENIED (implicit)";
+      body = "Nothing denied it. Nothing allowed it either. Everything in AWS starts denied, so silence is a refusal — which is why a brand-new user with no policies can do literally nothing.";
+    }
+
+    verdict.className = "verdict2 " + cls;
+    verdict.innerHTML = "";
+    verdict.appendChild(el("b", null, "s3:DeleteBucket  →  " + head));
+    verdict.appendChild(el("span", null, body));
+  }
+  draw();
+})();
+</script>
+</body>
+</html>

@@ -37,3 +37,49 @@ return tomorrow.
 
 11. `AdministratorAccess` is close to root power. Name two things it still
     cannot do that root can — and why that difference matters.
+
+## 01-02 · IAM in depth
+
+12. You hold `AdministratorAccess`. One more policy denies
+    `s3:DeleteBucket`. Can you delete a bucket? Can you still terminate EC2
+    instances? Explain the rule you are applying.
+
+13. Why can you not enforce a rule using only `Allow`? What does that imply
+    about how security teams and delivery teams use policies differently?
+
+14. A policy grants `s3:ListBucket` on `arn:aws:s3:::reports/*`. What can
+    the holder actually do, and why is this a bug that looks correct?
+
+15. Why might you deliberately grant `GetObject` without `ListBucket`? What
+    does that change for an attacker who steals the credential?
+
+16. Explain the difference between `Bool` and `BoolIfExists`. Which
+    real-world credential does that difference protect against, and why?
+
+17. Why does the MFA enforcement policy use `NotAction` rather than
+    `Action`? What breaks without the carve-out?
+
+18. Your first test user created an S3 bucket despite the policy existing.
+    What was wrong, and what is the general lesson?
+
+19. Name the two policies a role has. Which one does a user never need, and
+    why not?
+
+20. You are an administrator. You assume a read-only role and EC2 refuses
+    you. Why — and is that a bug?
+
+21. Read this and say everything it tells you:
+    `arn:aws:sts::639679388494:assumed-role/S3ReadOnlyRole/yash-admin`
+
+22. Two denial messages: "no identity-based policy allows" versus "explicit
+    deny in a policy". What is different, and why do they need opposite
+    fixes?
+
+23. Why is a stolen role credential less dangerous than a stolen access
+    key? Give two reasons.
+
+24. Why does a budget breaker that denies everything end up protecting you
+    *less* than one that denies only creation?
+
+25. Attaching a policy takes effect instantly on an existing session, but
+    MFA status does not change mid-session. Why are these different?

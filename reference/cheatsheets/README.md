@@ -137,3 +137,71 @@ arn : aws : service : region : account : resource
 a budget alerts. it never stops spending. data lags up to 24h.
 the real protection is tearing down every lab the same day.
 ```
+
+---
+
+## IAM policies — from day 01-02
+
+**A statement has four parts:**
+```
+Effect     Allow | Deny
+Action     service:Operation        e.g. s3:GetObject
+Resource   an ARN
+Condition  optional. the precision knob.
+```
+
+**Evaluation order — explicit Deny always wins:**
+```
+explicit Deny   ███████
+explicit Allow  ████
+implicit deny   █        the default. everything starts denied.
+```
+
+**S3 ARNs — the most common permission bug:**
+```
+arn:aws:s3:::bucket        the bucket    ← ...Bucket... actions
+arn:aws:s3:::bucket/*      the objects   ← ...Object... actions
+
+s3:ListBucket  on bucket/*   silently grants nothing
+```
+Three levels of visibility: `ListAllMyBuckets` (see bucket names) →
+`ListBucket` (see inside one) → `GetObject` (read one file).
+
+**Useful condition keys:**
+```
+aws:MultiFactorAuthPresent    did this session use MFA
+aws:SourceIp                  where the request came from
+aws:RequestedRegion           which region was asked about
+aws:username                  a VARIABLE - substituted with the caller
+```
+
+**BoolIfExists vs Bool:**
+```
+Bool          only matches when the key EXISTS and is false
+BoolIfExists  also matches when the key is ABSENT  ← access keys
+```
+
+**NotAction** = everything except the listed actions.
+
+**Roles:**
+```
+trust policy        WHO may assume it  (has a Principal) - only roles
+permissions policy  WHAT they may do
+
+assuming a role REPLACES your permissions. it does not add to them.
+```
+
+**Reading denial messages:**
+```
+"no identity-based policy allows"  → implicit deny. add an Allow.
+"explicit deny in a policy"        → a Deny is blocking. adding Allows won't help.
+arn:aws:sts::...:assumed-role/ROLE/USER   → temporary creds, role + wearer
+```
+
+**Traps:**
+```
+created a policy but never attached it   → zero effect, looks fine
+Bool instead of BoolIfExists             → access keys walk through
+no NotAction carve-out on an MFA deny    → permanent lockout
+budget breaker that denies everything    → you can't delete the costly thing
+```
