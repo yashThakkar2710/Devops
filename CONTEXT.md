@@ -11,9 +11,9 @@ Updated at the end of each day.
 
 | | |
 |---|---|
-| **Day** | 2 of 30 complete |
-| **Last completed** | `01-02` IAM in depth |
-| **Next** | `01-03` A VPC from scratch — subnets, route tables, IGW |
+| **Day** | 3 of 30 complete |
+| **Last completed** | `01-03` A VPC from scratch |
+| **Next** | `01-04` NAT, security groups, NACLs, VPC endpoints — **first day that costs money** |
 | **Started** | 2026-10-21 |
 | **Target** | AWS Solutions Architect Associate level by ~2026-11-20 |
 
@@ -181,6 +181,7 @@ route tables → VPC route tables (day 3); ports and TCP → security groups
 | — | `00-01` journey of a request (parked curriculum) | 2026-09-21 | Full packet capture read end to end |
 | 1 | `01-01` Account safety and the IAM model | 2026-10-21 | Account secured end to end. See AWS account state below. |
 | 2 | `01-02` IAM in depth | 2026-10-22 | Policies, roles, MFA enforcement, budget breaker. All tested, not assumed. |
+| 3 | `01-03` A VPC from scratch | 2026-10-22 | VPC, 4 subnets, IGW, public route table. Built by hand, no wizard. |
 
 ---
 
@@ -213,8 +214,23 @@ AWSBudgetsActionRole service role, principal budgets.amazonaws.com
 zero-spend-alert     budget, emails over $0.01, AUTOMATIC action attaching
                      BudgetBreaker to the Admins group
 CloudTrail           Event history on by default, 90 days, free. No trail.
-default VPC          created automatically by AWS - ignored, we build our own day 3
+default VPC          created automatically by AWS - ignored, we built our own
+
+my-vpc               10.0.0.0/16, built by hand on day 3
+  public-1a          10.0.1.0/24   ap-south-1a   → public-rt
+  public-1b          10.0.2.0/24   ap-south-1b   → public-rt
+  private-1a         10.0.11.0/24  ap-south-1a   → main rt (sealed)
+  private-1b         10.0.12.0/24  ap-south-1b   → main rt (sealed)
+my-igw               attached to my-vpc
+public-rt            0.0.0.0/0 → my-igw, associated with the 2 public subnets
 ```
+
+Addressing scheme: **low numbers public (1.x, 2.x), teens private (11.x,
+12.x)**. Keep it for every future subnet.
+
+**Not torn down, deliberately** — all of the above is free while idle and is
+the foundation for days 4 and 5. The teardown rule is about money, not
+tidiness.
 
 **If the budget breaker ever fires** and you cannot create resources: detach
 `BudgetBreaker-DenyExpensiveCreation` from the `Admins` group in IAM. You
@@ -237,5 +253,13 @@ Cost budget already claimed.
 **Known quirks on this account:**
 - Cost Explorer forecast showed *access denied* on day 1 — needs up to 24h
   to activate on a new account. Recheck.
-- Billing access for IAM users was already active; newer accounts ship that
-  way. Confirmed by testing rather than hunting for the setting.
+- **Billing access was NOT already active**, contrary to the day 1
+  conclusion. The Budgets page loaded because Budgets has its own
+  permissions that `AdministratorAccess` grants directly; the **Bills** page
+  refused outright. Fixed as root on day 3 at
+  `billing/home#/account` → *IAM user and role access to Billing
+  information* → Activate. The console sidebar does not contain that page;
+  reach it from the top-right account menu, or paste the URL **and press
+  F5**, since changing only the `#` fragment does not reload.
+- **Total spend as of day 3: USD 0.00.** Everything built so far is free,
+  including the budget action whose cost was uncertain.

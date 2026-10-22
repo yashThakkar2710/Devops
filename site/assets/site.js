@@ -8,7 +8,7 @@
   var STORE = "netcurriculum.progress";
   var THEME = "netcurriculum.theme";
   /* Day ids with a page built. Add an id here when its page ships. */
-  var BUILT_DAYS = ["01-01", "01-02"];
+  var BUILT_DAYS = ["01-01", "01-02", "01-03"];
   var phasesEl = document.getElementById("phases");
   var searchEl = document.getElementById("search");
   var emptyEl = document.getElementById("empty");

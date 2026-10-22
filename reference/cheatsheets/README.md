@@ -205,3 +205,56 @@ Bool instead of BoolIfExists             → access keys walk through
 no NotAction carve-out on an MFA deny    → permanent lockout
 budget breaker that denies everything    → you can't delete the costly thing
 ```
+
+---
+
+## VPC — from day 01-03
+
+**The hierarchy:**
+```
+region        ap-south-1          a city
+  AZ          ap-south-1a         a building in it
+    VPC       10.0.0.0/16         your neighbourhood (spans AZs)
+      subnet  10.0.1.0/24         one street (lives in ONE AZ)
+```
+
+**Private ranges — reusable everywhere, routable nowhere:**
+```
+10.0.0.0/8        172.16.0.0/12        192.168.0.0/16
+```
+
+**Slash numbers:**
+```
+/8   1 number fixed   16,777,216 addresses
+/16  2 numbers fixed       65,536
+/24  3 numbers fixed          256
+/32  4 numbers fixed            1
+/0   nothing fixed      everything   ← 0.0.0.0/0, the catch-all
+```
+Bigger slash = smaller range.
+
+**A route table:**
+```
+10.0.0.0/16   local        automatic, permanent, cannot be deleted
+0.0.0.0/0     igw-xxxxx    YOU add this. it is what makes a subnet public.
+```
+Most specific match wins.
+
+**What makes a subnet public:**
+```
+there is no checkbox. the name means nothing.
+public  = its route table points 0.0.0.0/0 at an internet gateway
+private = it does not
+```
+
+**Traps:**
+```
+gateway attached but no route    → nothing works, everything looks right
+internet route in the MAIN table → every subnet becomes public, forever
+all subnets in one AZ            → fine until that building has a problem
+a /24 VPC                        → runs out, and cannot be enlarged
+route to IGW from a private subnet → works BOTH ways. not what you want.
+```
+
+**Free while idle:** VPC, subnets, route tables, internet gateway.
+**Not free:** NAT gateway (~$32/mo), Elastic IPs when unattached.

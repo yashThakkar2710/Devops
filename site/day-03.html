@@ -1,0 +1,544 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 3 · A VPC from scratch</title>
+<link rel="stylesheet" href="assets/site.css">
+<style>
+  :root {
+    --pub:   #3fb950;
+    --priv:  #a371f7;
+    --gate:  #4493f8;
+    --warn:  #f0883e;
+    --bad:   #f85149;
+  }
+  :root[data-theme="light"] {
+    --pub:   #1a7f37;
+    --priv:  #8250df;
+    --gate:  #0969da;
+    --warn:  #bc4c00;
+    --bad:   #cf222e;
+  }
+
+  .crumb { padding: 20px 0 0; font-size: 13px; }
+  .crumb a { color: var(--accent); text-decoration: none; }
+  .crumb a:hover { text-decoration: underline; }
+
+  .lede { padding: 20px 0 8px; max-width: 66ch; }
+  .lede .eyebrow { font-family: var(--mono); font-size: 12px; color: var(--ink-faint); margin: 0 0 6px; }
+  .lede h1 { margin: 0 0 10px; font-size: 27px; letter-spacing: -.02em; }
+  .lede p { margin: 0; color: var(--ink-dim); }
+
+  section { padding: 32px 0; border-top: 1px solid var(--line); }
+  section > h2 { margin: 0 0 6px; font-size: 18px; letter-spacing: -.01em; }
+  section > .sub { margin: 0 0 20px; color: var(--ink-dim); font-size: 14px; max-width: 66ch; }
+  h3.minor { margin: 26px 0 10px; font-size: 15px; }
+  p { max-width: 66ch; }
+
+  pre.box {
+    font-family: var(--mono); font-size: 12.5px; line-height: 1.65;
+    background: var(--panel-2); border: 1px solid var(--line-soft);
+    border-radius: 7px; padding: 13px; margin: 14px 0;
+    overflow-x: auto; color: var(--ink-dim);
+  }
+  pre.box .dim { color: var(--ink-faint); }
+  pre.box .g   { color: var(--pub); }
+  pre.box .p   { color: var(--priv); }
+  pre.box .b   { color: var(--gate); }
+  pre.box .r   { color: var(--bad); }
+  pre.box .w   { color: var(--warn); }
+
+  /* slash explorer */
+  .slash { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px 18px; }
+  .octets { display: flex; gap: 6px; font-family: var(--mono); font-size: clamp(17px,3.2vw,26px); justify-content: center; margin-bottom: 6px; flex-wrap: wrap; }
+  .oct { padding: 7px 11px; border-radius: 7px; border: 1px solid var(--line); background: var(--panel-2); min-width: 3.2ch; text-align: center; transition: background .15s, border-color .15s, color .15s; }
+  .oct.fixed { background: color-mix(in srgb, var(--gate) 22%, transparent); border-color: color-mix(in srgb, var(--gate) 55%, var(--line)); color: var(--gate); }
+  .oct.free  { color: var(--ink-faint); }
+  .octlabels { display: flex; gap: 6px; justify-content: center; font-size: 11px; color: var(--ink-faint); font-family: var(--mono); margin-bottom: 18px; flex-wrap: wrap; }
+  .octlabels span { min-width: 5.2ch; text-align: center; }
+  .slider { display: flex; align-items: center; gap: 14px; justify-content: center; flex-wrap: wrap; }
+  .slider input { width: min(320px, 70vw); accent-color: var(--gate); }
+  .slider output { font-family: var(--mono); font-size: 15px; color: var(--gate); min-width: 4ch; }
+  .slashout { margin-top: 18px; text-align: center; }
+  .slashout b { display: block; font-family: var(--mono); font-size: 21px; letter-spacing: -.01em; }
+  .slashout span { font-size: 13.5px; color: var(--ink-dim); }
+
+  /* vpc diagram with toggle */
+  .vpcbox { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; }
+  .azrow { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px,1fr)); gap: 14px; }
+  .az { border: 1px dashed var(--line); border-radius: 9px; padding: 12px; }
+  .az > b { display: block; font-family: var(--mono); font-size: 11.5px; color: var(--ink-faint); margin-bottom: 10px; }
+  .sub {
+    border: 1px solid var(--line); border-radius: 7px; padding: 9px 12px;
+    margin-bottom: 9px; background: var(--panel-2);
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    font-size: 13px;
+  }
+  .sub:last-child { margin-bottom: 0; }
+  .sub code { font-family: var(--mono); font-size: 12px; }
+  .sub .state { font-family: var(--mono); font-size: 11px; white-space: nowrap; }
+  .sub.open  { border-color: color-mix(in srgb, var(--pub) 55%, var(--line)); }
+  .sub.open .state  { color: var(--pub); }
+  .sub.shut { border-color: color-mix(in srgb, var(--priv) 45%, var(--line)); }
+  .sub.shut .state { color: var(--priv); }
+  .gatebar {
+    margin-top: 14px; text-align: center; font-family: var(--mono); font-size: 12.5px;
+    padding: 10px; border-radius: 7px; border: 1px dashed var(--line); color: var(--ink-faint);
+  }
+  .gatebar.on { border-color: color-mix(in srgb, var(--gate) 50%, var(--line)); color: var(--gate); }
+  .rtbtns { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .tgl {
+    font: inherit; font-size: 13px; padding: 8px 13px; cursor: pointer; text-align: left;
+    background: var(--panel-2); color: var(--ink-dim);
+    border: 1px solid var(--line); border-radius: 7px;
+  }
+  .tgl[aria-pressed="true"] { color: var(--ink); border-color: color-mix(in srgb, var(--gate) 55%, var(--line)); background: color-mix(in srgb, var(--gate) 14%, transparent); }
+  .tgl:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .tgl small { display: block; font-size: 11.5px; color: var(--ink-faint); margin-top: 2px; }
+  .rtexplain { margin: 14px 0 0; font-size: 13.5px; color: var(--ink-dim); min-height: 3.2em; }
+  .rtexplain b { color: var(--ink); }
+
+  .callout {
+    margin: 18px 0; padding: 15px 17px; border-radius: var(--radius);
+    background: color-mix(in srgb, var(--warn) 10%, var(--panel));
+    border: 1px solid color-mix(in srgb, var(--warn) 38%, var(--line));
+  }
+  .callout p { margin: 0; }
+  .callout .big { font-size: 15.5px; font-weight: 600; margin-bottom: 4px; }
+
+  .done { border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+  .drow { display: grid; grid-template-columns: 3ch 1fr; gap: 12px; padding: 9px 14px; font-size: 13.5px; border-bottom: 1px solid var(--line-soft); }
+  .drow:last-child { border-bottom: 0; }
+  .drow span:first-child { color: var(--pub); }
+  .drow.x span:first-child { color: var(--bad); }
+
+  .vocab { display: grid; }
+  .vrow { display: grid; grid-template-columns: 18ch 1fr; gap: 16px; padding: 10px 0; border-bottom: 1px solid var(--line-soft); }
+  .vrow:last-child { border-bottom: 0; }
+  .vrow dt { font-size: 13.5px; color: var(--accent); font-family: var(--mono); }
+  .vrow dd { margin: 0; font-size: 13.5px; color: var(--ink-dim); }
+
+  ol.qs { margin: 0; padding-left: 20px; }
+  ol.qs li { margin-bottom: 11px; font-size: 14px; max-width: 64ch; }
+
+  .foot { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+    border-top: 1px solid var(--line); padding-top: 16px; padding-bottom: 34px;
+    font-size: 12px; color: var(--ink-faint); }
+
+  @media (max-width: 620px) { .vrow { grid-template-columns: 1fr; gap: 2px; } }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <div class="brand"><span class="brand-mark">//</span><span>AWS in 30 days</span></div>
+    <div class="topbar-tools"><button id="theme" type="button" title="Toggle theme">◐</button></div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <p class="crumb"><a href="index.html">← Progress</a> · <a href="plan.html">The plan</a> · <a href="day-02.html">Day 2</a></p>
+
+  <div class="lede">
+    <p class="eyebrow">Week 1 · Day 3 · 01-03</p>
+    <h1>A VPC from scratch</h1>
+    <p>AWS runs millions of servers in one building — yours, mine, a bank's.
+    A VPC is a private network of your own inside it, sealed by default.
+    Nothing reaches your servers unless you deliberately build a path.</p>
+  </div>
+
+  <section>
+    <h2>Every book has a page 5</h2>
+    <p class="sub">Nothing else makes sense until this clicks.</p>
+
+    <p>Millions of books, millions of "page 5", and no confusion — because
+    <strong>page 5 means nothing until you say which book.</strong></p>
+
+    <pre class="box">company A's network    company B's network    your network
+<span class="p">10.0.0.5</span>               <span class="p">10.0.0.5</span>               <span class="p">10.0.0.5</span></pre>
+
+    <p>All three exist. None collide. Now try to reach one from outside:</p>
+
+    <pre class="box">you     → "send this to 10.0.0.5"
+router  → <span class="r">"which 10.0.0.5? there are millions."</span>
+router  → drops it</pre>
+
+    <div class="callout">
+      <p class="big">Private addresses are safe because the question is unanswerable.</p>
+      <p>Not because of a firewall. Before any rule exists, your servers have
+      addresses the internet physically cannot deliver to.</p>
+    </div>
+
+    <h3 class="minor">Three ranges reserved worldwide</h3>
+    <pre class="box"><span class="p">10.0.0.0</span>    → 10.255.255.255
+<span class="p">172.16.0.0</span>  → 172.31.255.255
+<span class="p">192.168.0.0</span> → 192.168.255.255</pre>
+    <p>Anyone may use them. Nobody routes them. A <strong>public</strong>
+    address is the opposite — unique on the whole internet, like a street
+    address rather than a room number.</p>
+  </section>
+
+  <section>
+    <h2>One machine, many addresses</h2>
+    <p class="sub">Measured on this very PC.</p>
+
+    <pre class="box">Wi-Fi                       <span class="p">192.168.31.9</span>     <span class="dim">on the home network</span>
+vEthernet (WSL)             <span class="p">172.26.0.1</span>
+vEthernet (Default Switch)  <span class="p">172.20.144.1</span>
+Loopback                    <span class="p">127.0.0.1</span>        <span class="dim">itself</span></pre>
+
+    <p>Four addresses, one computer. <strong>An address belongs to a door,
+    not to a machine.</strong></p>
+
+    <h3 class="minor">Three networks, nested — and the sender gets rewritten twice</h3>
+
+    <pre class="box">leaving the inner network   FROM <span class="p">172.26.1.224</span>   TO 104.20.23.154
+leaving the PC              FROM <span class="p">192.168.31.9</span>   TO 104.20.23.154   <span class="w">rewritten</span>
+leaving the router          FROM <span class="g">152.59.39.80</span>   TO 104.20.23.154   <span class="w">rewritten</span></pre>
+
+    <p><strong>The destination never changes. The sender changes at every
+    boundary.</strong> The website only ever sees the public address, and
+    could not reply to the private one if it tried.</p>
+
+    <p>Why rewrite? A private address is a page number — useless on the next
+    network out. Send it unchanged and the reply has nowhere to go. Each
+    layer keeps a note of who asked, so replies find their way home. That
+    mechanism is <strong>NAT</strong>, and it is day 4.</p>
+  </section>
+
+  <section>
+    <h2>The slash number</h2>
+    <p class="sub">Drag it. Blue means fixed.</p>
+
+    <div class="slash">
+      <div class="octets" id="octets"></div>
+      <div class="octlabels">
+        <span>1st</span><span>2nd</span><span>3rd</span><span>4th</span>
+      </div>
+      <div class="slider">
+        <label for="pfx" style="font-size:13px;color:var(--ink-dim)">prefix</label>
+        <input type="range" id="pfx" min="0" max="32" step="8" value="24">
+        <output id="pfxout">/24</output>
+      </div>
+      <div class="slashout" id="slashout"></div>
+    </div>
+
+    <p style="margin-top:16px">An IPv4 address is four numbers, each 0–255.
+    The slash says <strong>how many of them are pinned down</strong>. Pin
+    more, and fewer addresses are left to vary.</p>
+
+    <pre class="box"><span class="b">192 . 168 . 31</span> . <span class="dim">9</span>  /24
+<span class="b">└── fixed ───┘</span>   <span class="dim">└┬┘</span>
+                 <span class="dim">varies</span></pre>
+
+    <p><strong>Bigger slash, smaller range.</strong> That feels backwards
+    until you see it as "how much is fixed". And <code>/0</code> fixes
+    nothing at all — which is why <code>0.0.0.0/0</code> matches every
+    address that exists, and is the catch-all in a route table.</p>
+  </section>
+
+  <section>
+    <h2>Neighbourhood and streets</h2>
+
+    <pre class="box">VPC     the neighbourhood   <span class="b">10.0.0.0/16</span>    65,536 addresses
+subnet  one street in it    <span class="b">10.0.1.0/24</span>    256 addresses</pre>
+
+    <p><strong>Why cut it into streets?</strong> Not for tidiness — for
+    <em>different rules</em>.</p>
+
+    <pre class="box"><span class="g">10.0.1.0/24</span>    web servers   <span class="dim">the internet may reach these</span>
+<span class="p">10.0.11.0/24</span>   database      <span class="dim">the internet must never reach these</span></pre>
+
+    <p>Put everything on one street and you cannot separate them.</p>
+
+    <h3 class="minor">Availability zones are real buildings</h3>
+    <p>A region is several availability zones — physically separate
+    datacenters, different power, kilometres apart, joined by fibre fast
+    enough that traffic between them takes about a millisecond.</p>
+    <p><strong>A subnet lives in exactly one AZ and cannot span two.</strong>
+    So surviving a datacenter failure needs at least two subnets, one per
+    building.</p>
+    <p>Same shape as the MFA backup on day 1: <em>more than one way in, each
+    one strong</em>. AWS repeats this idea everywhere.</p>
+
+    <h3 class="minor">The CIDR can never be changed</h3>
+    <p>Chosen at creation, fixed forever. Blocks can be added; the first one
+    cannot be altered or shrunk. Choose generously — unused addresses cost
+    nothing, and a <code>/24</code> VPC runs out.</p>
+  </section>
+
+  <section>
+    <h2>What actually makes a subnet public</h2>
+    <p class="sub">Toggle the two things below and watch which subnets can
+    reach the internet.</p>
+
+    <div class="vpcbox">
+      <div class="rtbtns" id="rtbtns"></div>
+
+      <div class="azrow">
+        <div class="az">
+          <b>ap-south-1a &nbsp;·&nbsp; building A</b>
+          <div class="sub" id="s-pub-a"><span>public-1a <code>10.0.1.0/24</code></span><span class="state">—</span></div>
+          <div class="sub" id="s-priv-a"><span>private-1a <code>10.0.11.0/24</code></span><span class="state">—</span></div>
+        </div>
+        <div class="az">
+          <b>ap-south-1b &nbsp;·&nbsp; building B</b>
+          <div class="sub" id="s-pub-b"><span>public-1b <code>10.0.2.0/24</code></span><span class="state">—</span></div>
+          <div class="sub" id="s-priv-b"><span>private-1b <code>10.0.12.0/24</code></span><span class="state">—</span></div>
+        </div>
+      </div>
+
+      <div class="gatebar" id="gatebar">no internet gateway</div>
+      <p class="rtexplain" id="rtexplain"></p>
+    </div>
+
+    <div class="callout">
+      <p class="big">There is no "public" checkbox. The name means nothing.</p>
+      <p>A subnet is public if its route table has a line pointing to an
+      internet gateway. It is a property of the <strong>route table</strong>,
+      not of the subnet.</p>
+    </div>
+
+    <h3 class="minor">A route table is a signpost you have seen before</h3>
+    <pre class="box">Destination     Target
+<span class="b">10.0.0.0/16</span>     local          <span class="dim">my own neighbourhood → direct</span>
+<span class="g">0.0.0.0/0</span>       igw-xxxxx      <span class="dim">everything else → the gate</span></pre>
+    <pre class="box"><span class="dim">on any ordinary machine:</span>
+default  via 192.168.31.1      <span class="dim">← "default" IS 0.0.0.0/0</span></pre>
+    <p>The table picks the <strong>most specific</strong> match.
+    <code>10.0.1.50</code> matches <code>/16</code> and stays local;
+    <code>104.20.23.154</code> matches only <code>0.0.0.0/0</code> and goes
+    to the gate.</p>
+    <p><code>local</code> appears automatically and cannot be deleted. A VPC
+    must always be able to talk to itself.</p>
+
+    <h3 class="minor">Never put an internet route in the main route table</h3>
+    <p>Every VPC has a <strong>main route table</strong> — the fallback for
+    any subnet not explicitly assigned one. Add an internet route there and
+    <em>every</em> subnet becomes public, including ones you create next
+    month and forget about.</p>
+    <div class="callout">
+      <p class="big">The main table is what you get when you forget something.</p>
+      <p>So it should be the safe option. Public subnets get their own table;
+      private subnets stay on the main one.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>What exists now</h2>
+    <pre class="box">my-vpc           <span class="b">10.0.0.0/16</span>
+  public-1a      10.0.1.0/24    ap-south-1a
+  public-1b      10.0.2.0/24    ap-south-1b
+  private-1a     10.0.11.0/24   ap-south-1a
+  private-1b     10.0.12.0/24   ap-south-1b
+
+my-igw           attached
+public-rt        0.0.0.0/0 → my-igw   <span class="dim">→ public-1a, public-1b only</span>
+main route table only "local"         <span class="dim">→ both private subnets</span></pre>
+
+    <p><strong>Addressing scheme:</strong> low numbers public, teens private.
+    Nothing technical about it — it means an address read in a log at 2am
+    identifies itself without a lookup. Pick a scheme early and keep it.</p>
+
+    <div class="callout">
+      <p class="big">No teardown today, and that is not a contradiction.</p>
+      <p>VPCs, subnets, route tables and gateways are free while idle, and
+      this is the foundation for days 4 and 5. The teardown rule is about
+      <em>money</em>, not tidiness: never leave running something that
+      charges.</p>
+    </div>
+
+    <h3 class="minor">A day-1 conclusion, corrected</h3>
+    <p>Day 1 concluded that IAM billing access was already on, because the
+    Budgets page loaded. <strong>That was wrong.</strong> Budgets has its own
+    permissions which <code>AdministratorAccess</code> grants directly; the
+    switch was off and the Bills page refused outright. Fixed as root.</p>
+    <pre class="box">testing one page  →  tells you about that one page</pre>
+    <p>Not an argument against testing — an argument for testing
+    <strong>the thing you actually care about</strong>. We cared about seeing
+    the bill, so we should have opened the bill.</p>
+    <p>Confirmed at the same time: total spend so far is
+    <strong>USD 0.00</strong>, including the budget action whose cost was
+    uncertain.</p>
+  </section>
+
+  <section>
+    <h2>Words you now own</h2>
+    <dl class="vocab">
+      <div class="vrow"><dt>VPC</dt><dd>Your own private network inside AWS. Sealed by default.</dd></div>
+      <div class="vrow"><dt>subnet</dt><dd>One street inside it, living in exactly one availability zone.</dd></div>
+      <div class="vrow"><dt>CIDR</dt><dd>An address plus a slash saying how much of it is fixed.</dd></div>
+      <div class="vrow"><dt>private address</dt><dd>Reusable everywhere, routable nowhere.</dd></div>
+      <div class="vrow"><dt>availability zone</dt><dd>A physically separate datacenter within a region.</dd></div>
+      <div class="vrow"><dt>route table</dt><dd>The signpost telling a subnet where to send things.</dd></div>
+      <div class="vrow"><dt>local route</dt><dd>Automatic, permanent, "I know my own VPC".</dd></div>
+      <div class="vrow"><dt>main route table</dt><dd>The fallback for subnets you did not assign one. Keep it safe.</dd></div>
+      <div class="vrow"><dt>internet gateway</dt><dd>The gate out of the VPC. Useless until a route points at it.</dd></div>
+      <div class="vrow"><dt>0.0.0.0/0</dt><dd>Every address that exists. The catch-all, also called the default route.</dd></div>
+      <div class="vrow"><dt>NAT</dt><dd>Rewriting the sender address at a boundary. Day 4.</dd></div>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Test yourself</h2>
+    <p class="sub">Answer before looking anything up.</p>
+    <ol class="qs">
+      <li>How can two companies both use <code>10.0.0.0/16</code> without any conflict?</li>
+      <li>Your server is <code>10.0.1.50</code>. Someone in another country types that address. What happens, and why?</li>
+      <li>Why is a bigger slash number a <em>smaller</em> range?</li>
+      <li>What does <code>0.0.0.0/0</code> mean, and why is it the catch-all?</li>
+      <li>A packet is going to <code>10.0.2.99</code> and the route table has both <code>10.0.0.0/16 → local</code> and <code>0.0.0.0/0 → igw</code>. Which wins?</li>
+      <li>You create an internet gateway and attach it. Can your servers reach the internet? Explain.</li>
+      <li>What single change turns a private subnet into a public one?</li>
+      <li>Why should an internet route never go in the main route table?</li>
+      <li>Why can a subnet not span two availability zones?</li>
+      <li>Why does a server in a public subnet still need something else before the internet can reach it?</li>
+      <li>Your private subnet needs to download software updates. Why can you not just add a route to the internet gateway?</li>
+      <li>Why can a VPC's CIDR never be changed after creation?</li>
+      <li>A subnet is named <code>public-1a</code> and nothing can reach the internet from it. Give the most likely cause.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>Carried forward</h2>
+    <dl class="vocab">
+      <div class="vrow"><dt>outbound-only internet</dt><dd>Day 4 — NAT gateway. The answer to question 11.</dd></div>
+      <div class="vrow"><dt>security groups, NACLs</dt><dd>Day 4 — rules on top of routing.</dd></div>
+      <div class="vrow"><dt>public IP addresses</dt><dd>Day 5 — the other half of being reachable.</dd></div>
+      <div class="vrow"><dt>overlapping CIDRs</dt><dd>Day 24 — why today's choice matters later.</dd></div>
+    </dl>
+  </section>
+
+</main>
+
+<footer class="wrap foot">
+  <span>Day 3 of 30 · notes in <code>docs/week-1-foundations/</code></span>
+  <span class="muted"><a href="plan.html" style="color:inherit">The plan</a></span>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var THEME = "netcurriculum.theme";
+  try {
+    var saved = localStorage.getItem(THEME);
+    if (saved) document.documentElement.dataset.theme = saved;
+  } catch (e) { /* storage may be blocked; the page still works */ }
+  document.getElementById("theme").addEventListener("click", function () {
+    var next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+    document.documentElement.dataset.theme = next;
+    try { localStorage.setItem(THEME, next); } catch (e) { /* ignore */ }
+  });
+
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+
+  /* ---------- slash explorer ---------- */
+  var ADDR = [192, 168, 31, 9];
+  var octets = document.getElementById("octets");
+  var pfx = document.getElementById("pfx");
+  var pfxout = document.getElementById("pfxout");
+  var slashout = document.getElementById("slashout");
+
+  ADDR.forEach(function () { octets.appendChild(el("span", "oct")); });
+
+  function fmt(n) {
+    return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  }
+
+  function drawSlash() {
+    var p = parseInt(pfx.value, 10);
+    var fixed = p / 8;
+    pfxout.textContent = "/" + p;
+
+    Array.prototype.forEach.call(octets.children, function (o, i) {
+      o.textContent = ADDR[i];
+      o.className = "oct " + (i < fixed ? "fixed" : "free");
+    });
+
+    var count = Math.pow(2, 32 - p);
+    slashout.innerHTML = "";
+    slashout.appendChild(el("b", null, fmt(count) + (count === 1 ? " address" : " addresses")));
+
+    var note;
+    if (p === 32) note = "Everything is pinned down, so exactly one address. This is how a single host is written.";
+    else if (p === 0) note = "Nothing is pinned down, so it matches every address that exists. This is 0.0.0.0/0 — the catch-all.";
+    else if (p === 24) note = "The first three numbers are fixed, the last one varies. A typical home network, and a typical subnet.";
+    else if (p === 16) note = "Two numbers fixed. A sensible size for a whole VPC — room to carve 256 subnets out of it.";
+    else note = fixed + " of the four numbers are fixed; the rest vary.";
+    slashout.appendChild(el("span", null, note));
+  }
+  pfx.addEventListener("input", drawSlash);
+  drawSlash();
+
+  /* ---------- VPC reachability toggle ----------
+     Two independent switches. The point is that the gateway alone changes
+     nothing — the route table is what makes a subnet public. */
+  var igwOn = false;
+  var routeOn = false;
+  var rtbtns = document.getElementById("rtbtns");
+  var gatebar = document.getElementById("gatebar");
+  var rtexplain = document.getElementById("rtexplain");
+
+  function mkTgl(label, hint, get, set) {
+    var b = el("button", "tgl");
+    b.type = "button";
+    b.appendChild(document.createTextNode(label));
+    b.appendChild(el("small", null, hint));
+    b.addEventListener("click", function () { set(!get()); drawVpc(); });
+    rtbtns.appendChild(b);
+    return b;
+  }
+
+  var tIgw = mkTgl("Internet gateway", "created and attached to the VPC",
+    function () { return igwOn; }, function (v) { igwOn = v; });
+  var tRoute = mkTgl("public-rt: 0.0.0.0/0 → igw", "and associated with the two public subnets",
+    function () { return routeOn; }, function (v) { routeOn = v; });
+
+  var SUBS = [
+    { id: "s-pub-a",  pub: true },
+    { id: "s-priv-a", pub: false },
+    { id: "s-pub-b",  pub: true },
+    { id: "s-priv-b", pub: false }
+  ];
+
+  function drawVpc() {
+    tIgw.setAttribute("aria-pressed", igwOn ? "true" : "false");
+    tRoute.setAttribute("aria-pressed", routeOn ? "true" : "false");
+
+    gatebar.textContent = igwOn ? "my-igw  ──  attached" : "no internet gateway";
+    gatebar.className = "gatebar" + (igwOn ? " on" : "");
+
+    var reachable = igwOn && routeOn;
+
+    SUBS.forEach(function (s) {
+      var node = document.getElementById(s.id);
+      var open = reachable && s.pub;
+      node.className = "sub " + (open ? "open" : "shut");
+      node.querySelector(".state").textContent = open ? "can reach the internet" : "sealed";
+    });
+
+    if (!igwOn && !routeOn) {
+      rtexplain.innerHTML = "<b>Nothing can leave.</b> Every subnet falls back to the main route table, which knows only <code>local</code>. Four subnets, identical behaviour — the names <em>public</em> and <em>private</em> mean nothing yet.";
+    } else if (igwOn && !routeOn) {
+      rtexplain.innerHTML = "<b>The gate exists and still nothing changes.</b> No route table mentions it, so no subnet can find it. This is the most common “why can't my server reach the internet” question in AWS — the gateway is attached, everything looks right, and the route table was never touched.";
+    } else if (!igwOn && routeOn) {
+      rtexplain.innerHTML = "<b>A signpost pointing at nothing.</b> The route exists but there is no gateway for it to lead to. AWS will not even let you save this — shown here only to make the pairing obvious.";
+    } else {
+      rtexplain.innerHTML = "<b>Both pieces, and only now does it work.</b> The two public subnets use <code>public-rt</code>, which sends <code>0.0.0.0/0</code> to the gateway. The private subnets were never associated with it, so they still fall back to the main table and stay sealed. <em>One line of configuration is the entire difference.</em>";
+    }
+  }
+  drawVpc();
+})();
+</script>
+</body>
+</html>

@@ -83,3 +83,45 @@ return tomorrow.
 
 25. Attaching a policy takes effect instantly on an existing session, but
     MFA status does not change mid-session. Why are these different?
+
+## 01-03 · A VPC from scratch
+
+26. How can two different companies both use `10.0.0.0/16` without any
+    conflict? What makes that possible?
+
+27. Your server is `10.0.1.50`. Someone in another country types that
+    address into their browser. What happens, and why is that the first
+    layer of security?
+
+28. Why is a bigger slash number a *smaller* range?
+
+29. What does `0.0.0.0/0` mean literally, and why does that make it the
+    catch-all in a route table?
+
+30. A packet is going to `10.0.2.99`. The route table has both
+    `10.0.0.0/16 → local` and `0.0.0.0/0 → igw`. Which line wins, and what
+    rule are you applying?
+
+31. You create an internet gateway and attach it to your VPC. Can your
+    servers reach the internet now? Explain precisely.
+
+32. What single change turns a private subnet into a public one?
+
+33. Why should an internet route never be added to the main route table?
+
+34. Why can a subnet not span two availability zones?
+
+35. A server sits in a public subnet with a correct route. The internet
+    still cannot reach it. What else is missing?
+
+36. Your private subnet needs to download software updates. Why can you not
+    simply add a route to the internet gateway?
+
+37. Why can a VPC's CIDR never be changed after creation?
+
+38. A subnet is named `public-1a` and nothing can reach the internet from
+    it. Give the most likely cause.
+
+39. On day 1 we concluded billing access was already enabled because the
+    Budgets page loaded. It was not. What was wrong with that test, and what
+    is the general lesson?
