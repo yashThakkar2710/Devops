@@ -299,3 +299,75 @@ the SLASH says how far it extends
 
 **Sizing a VPC:** the exam wants the minimum. Real life wants `/16` —
 unused addresses are free and a VPC can never be enlarged.
+
+---
+
+## NAT, security and endpoints - from day 01-04
+
+**Routing vs security answer different questions:**
+```
+route table   WHERE does this go?
+security      is it ALLOWED?
+both must say yes
+```
+
+**Outbound-only, and why:**
+```
+-> internet gateway   two-way.  public.
+-> NAT gateway        one-way.  private.
+
+one-way is a SIDE EFFECT of rewriting the sender address,
+not a firewall rule. no note = no way back in.
+```
+
+**Two independent switches for reachability:**
+```
+route, no public IP   can go out via NAT, cannot be reached
+public IP, no route   nothing works at all
+```
+A NAT gateway must sit in a PUBLIC subnet - that is where both hold.
+
+**Security group vs NACL:**
+```
+                 security group        NACL
+attached to      a resource            a subnet
+state            STATEFUL              STATELESS
+deny rules       no                    yes
+order            none, any allow wins  numbered, FIRST MATCH WINS
+default          deny in, allow out    allow everything both ways
+use it for       ~everything           blanket DENY only
+```
+
+**Stateless means both directions:**
+```
+NACL inbound   allow 443
+NACL outbound  allow 1024-65535      <- forget this and replies vanish
+```
+
+**Diagnostic order, outside in:**
+```
+route table  ->  NACL  ->  security group  ->  the server
+any one says no = blocked
+```
+
+**VPC endpoints:**
+```
+Gateway     S3 + DynamoDB ONLY.  route table entry.  FREE
+Interface   everything else.     an ENI in your subnet.  paid, per AZ
+```
+Gateway endpoints write their own route:
+`pl-xxxx (service) -> vpce-xxxx`. Most specific wins, so that traffic
+takes the free private path automatically.
+
+**Costs to remember:**
+```
+NAT gateway          $0.045/hr  ~$32/mo  + $0.045/GB
+Elastic IP, idle     ~$3.60/mo            <- the one people forget
+Elastic IP, attached free
+gateway endpoint     free
+interface endpoint   ~$0.01/hr per AZ + data
+```
+
+**Blackhole** in a route table = the target no longer exists. Traffic
+matches the rule and vanishes with no error. Usually the answer to
+"it worked yesterday".

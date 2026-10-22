@@ -180,3 +180,55 @@ return tomorrow.
     Defend that choice, then say when it would be the wrong one.
 
 59. Why are `10.0.3.0/24` through `10.0.10.0/24` left empty on purpose?
+
+## 01-04 · NAT, security groups, NACLs and endpoints
+
+60. Why is `0.0.0.0/0 -> internet gateway` the wrong fix for a private
+    subnet that needs software updates?
+
+61. Your laptop reaches the internet but the internet cannot reach your
+    laptop. Explain the mechanism - and why no firewall rule is involved.
+
+62. Would a NAT gateway work in a private subnet if you gave it an Elastic
+    IP? Explain precisely what would happen.
+
+63. Name the two independent things required before anything is reachable
+    from the internet. What happens with only one of them?
+
+64. Your NAT is in `public-1a`. Building A fails. What happens to
+    `private-1b`, and why is that outcome surprising?
+
+65. What is the standard fix for that, and what does it cost? Why do many
+    small setups not bother?
+
+66. You allow port 443 inbound on a security group. Do you need an
+    outbound rule? What about on a NACL? Explain the difference.
+
+67. Why are NACLs stateless while security groups are stateful? Give the
+    design reason, not just the fact.
+
+68. You want to block one specific IP address from a whole subnet. Which
+    tool, and why can the other one structurally not do it?
+
+69. A NACL has `100 ALLOW 0.0.0.0/0` and `200 DENY 1.2.3.4`. Is 1.2.3.4
+    blocked? What rule are you applying?
+
+70. Two servers sit in the same subnet. Can one accept web traffic while
+    the other refuses it? Why?
+
+71. Something cannot connect to your server. Name the three things you
+    check, in order, and say why that order.
+
+72. Why is a gateway endpoint free when an interface endpoint is not?
+
+73. Both endpoint types now exist for S3. How do you tell which one an exam
+    question is asking for?
+
+74. What is a `pl-` prefix list, and why reference one instead of writing
+    IP ranges yourself?
+
+75. A route table shows a target marked **Blackhole**. What does that mean,
+    and what question does it usually answer?
+
+76. You delete a NAT gateway. Name the two things left behind and what each
+    costs you.

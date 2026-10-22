@@ -1,0 +1,566 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 4 · NAT, security groups and endpoints</title>
+<link rel="stylesheet" href="assets/site.css">
+<style>
+  :root {
+    --ok:    #3fb950;
+    --no:    #f85149;
+    --warn:  #f0883e;
+    --cool:  #a371f7;
+    --blue:  #4493f8;
+  }
+  :root[data-theme="light"] {
+    --ok:    #1a7f37;
+    --no:    #cf222e;
+    --warn:  #bc4c00;
+    --cool:  #8250df;
+    --blue:  #0969da;
+  }
+
+  .crumb { padding: 20px 0 0; font-size: 13px; }
+  .crumb a { color: var(--accent); text-decoration: none; }
+  .crumb a:hover { text-decoration: underline; }
+
+  .lede { padding: 20px 0 8px; max-width: 66ch; }
+  .lede .eyebrow { font-family: var(--mono); font-size: 12px; color: var(--ink-faint); margin: 0 0 6px; }
+  .lede h1 { margin: 0 0 10px; font-size: 27px; letter-spacing: -.02em; }
+  .lede p { margin: 0; color: var(--ink-dim); }
+
+  section { padding: 32px 0; border-top: 1px solid var(--line); }
+  section > h2 { margin: 0 0 6px; font-size: 18px; letter-spacing: -.01em; }
+  section > .sub { margin: 0 0 20px; color: var(--ink-dim); font-size: 14px; max-width: 66ch; }
+  h3.minor { margin: 26px 0 10px; font-size: 15px; }
+  p { max-width: 66ch; }
+
+  pre.box {
+    font-family: var(--mono); font-size: 12.5px; line-height: 1.65;
+    background: var(--panel-2); border: 1px solid var(--line-soft);
+    border-radius: 7px; padding: 13px; margin: 14px 0;
+    overflow-x: auto; color: var(--ink-dim);
+  }
+  pre.box .dim { color: var(--ink-faint); }
+  pre.box .g   { color: var(--ok); }
+  pre.box .r   { color: var(--no); }
+  pre.box .w   { color: var(--warn); }
+  pre.box .c   { color: var(--cool); }
+  pre.box .b   { color: var(--blue); }
+
+  /* guard simulator */
+  .guard { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; }
+  .gtabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .gtab {
+    font: inherit; font-size: 13px; padding: 8px 14px; cursor: pointer; text-align: left;
+    background: var(--panel-2); color: var(--ink-dim);
+    border: 1px solid var(--line); border-radius: 7px;
+  }
+  .gtab[aria-pressed="true"] { color: var(--ink); border-color: color-mix(in srgb, var(--blue) 55%, var(--line)); background: color-mix(in srgb, var(--blue) 14%, transparent); }
+  .gtab:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .gtab small { display: block; font-size: 11.5px; color: var(--ink-faint); margin-top: 2px; }
+  .rules { display: grid; gap: 7px; margin-bottom: 14px; }
+  .rule { display: grid; grid-template-columns: 9ch 1fr auto; gap: 12px; align-items: center;
+          font-family: var(--mono); font-size: 12.5px; padding: 8px 11px;
+          border: 1px solid var(--line); border-radius: 6px; background: var(--panel-2); }
+  .rule .dir { color: var(--ink-faint); }
+  .rule .state { font-size: 11px; }
+  .rule.have { border-color: color-mix(in srgb, var(--ok) 50%, var(--line)); }
+  .rule.have .state { color: var(--ok); }
+  .rule.auto { border-style: dashed; }
+  .rule.auto .state { color: var(--cool); }
+  .rule.miss { border-color: color-mix(in srgb, var(--no) 50%, var(--line)); background: color-mix(in srgb, var(--no) 9%, transparent); }
+  .rule.miss .state { color: var(--no); }
+  .flow { display: grid; gap: 8px; margin-top: 4px; }
+  .step2 { display: grid; grid-template-columns: 13ch 1fr auto; gap: 12px; align-items: center;
+           font-size: 13px; padding: 9px 12px; border-radius: 6px; border: 1px solid var(--line); }
+  .step2 .lbl { font-family: var(--mono); font-size: 12px; color: var(--ink-faint); }
+  .step2 .vd { font-family: var(--mono); font-size: 12px; }
+  .step2.pass { border-color: color-mix(in srgb, var(--ok) 45%, var(--line)); }
+  .step2.pass .vd { color: var(--ok); }
+  .step2.fail { border-color: color-mix(in srgb, var(--no) 45%, var(--line)); background: color-mix(in srgb, var(--no) 9%, transparent); }
+  .step2.fail .vd { color: var(--no); }
+  .gnote { margin: 14px 0 0; font-size: 13.5px; color: var(--ink-dim); min-height: 3.6em; }
+  .gnote b { color: var(--ink); }
+
+  .vs { display: grid; grid-template-columns: repeat(auto-fit, minmax(265px, 1fr)); gap: 14px; margin: 18px 0; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; }
+  .card h4 { margin: 0 0 3px; font-size: 15px; font-family: var(--mono); }
+  .card .when { margin: 0 0 12px; font-size: 12.5px; color: var(--ink-faint); }
+  .card ul { margin: 0; padding-left: 17px; font-size: 13.5px; color: var(--ink-dim); }
+  .card li { margin-bottom: 5px; }
+  .card.sg h4 { color: var(--ok); }
+  .card.sg { border-color: color-mix(in srgb, var(--ok) 42%, var(--line)); }
+  .card.nacl h4 { color: var(--cool); }
+  .card.nacl { border-color: color-mix(in srgb, var(--cool) 42%, var(--line)); }
+
+  .callout {
+    margin: 18px 0; padding: 15px 17px; border-radius: var(--radius);
+    background: color-mix(in srgb, var(--warn) 10%, var(--panel));
+    border: 1px solid color-mix(in srgb, var(--warn) 38%, var(--line));
+  }
+  .callout p { margin: 0; }
+  .callout .big { font-size: 15.5px; font-weight: 600; margin-bottom: 4px; }
+
+  .done { border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+  .drow { display: grid; grid-template-columns: 3ch 1fr; gap: 12px; padding: 9px 14px; font-size: 13.5px; border-bottom: 1px solid var(--line-soft); }
+  .drow:last-child { border-bottom: 0; }
+  .drow span:first-child { color: var(--ok); }
+  .drow.x span:first-child { color: var(--no); }
+
+  .vocab { display: grid; }
+  .vrow { display: grid; grid-template-columns: 19ch 1fr; gap: 16px; padding: 10px 0; border-bottom: 1px solid var(--line-soft); }
+  .vrow:last-child { border-bottom: 0; }
+  .vrow dt { font-size: 13.5px; color: var(--accent); font-family: var(--mono); }
+  .vrow dd { margin: 0; font-size: 13.5px; color: var(--ink-dim); }
+
+  ol.qs { margin: 0; padding-left: 20px; }
+  ol.qs li { margin-bottom: 11px; font-size: 14px; max-width: 64ch; }
+
+  .foot { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+    border-top: 1px solid var(--line); padding-top: 16px; padding-bottom: 34px;
+    font-size: 12px; color: var(--ink-faint); }
+
+  @media (max-width: 620px) {
+    .vrow { grid-template-columns: 1fr; gap: 2px; }
+    .rule, .step2 { grid-template-columns: 1fr; gap: 3px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <div class="brand"><span class="brand-mark">//</span><span>AWS in 30 days</span></div>
+    <div class="topbar-tools"><button id="theme" type="button" title="Toggle theme">◐</button></div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <p class="crumb"><a href="index.html">← Progress</a> · <a href="plan.html">The plan</a> · <a href="day-03.html">Day 3</a></p>
+
+  <div class="lede">
+    <p class="eyebrow">Week 1 · Day 4 · 01-04</p>
+    <h1>NAT, security groups and endpoints</h1>
+    <p>A database in a private subnet needs security updates. The obvious
+    fix — a route to the internet gateway — makes it public. Getting
+    outbound without inbound is the whole day.</p>
+  </div>
+
+  <section>
+    <h2>Why the obvious fix is wrong</h2>
+
+    <pre class="box">private-1a  →  0.0.0.0/0 → my-igw
+
+database  →  internet     <span class="g">allowed</span>    <span class="dim">what you wanted</span>
+internet  →  database     <span class="r">also allowed</span>   <span class="dim">what you just created</span></pre>
+
+    <p><strong>A route to an internet gateway works in both
+    directions.</strong> There is no way to make it one-way. What you need
+    is something else entirely.</p>
+  </section>
+
+  <section>
+    <h2>You have already seen the answer working</h2>
+    <p class="sub">Measured on this machine, in the networking work.</p>
+
+    <pre class="box">leaving the PC        FROM <span class="c">192.168.31.9</span>    <span class="dim">private</span>
+leaving the router    FROM <span class="g">152.59.39.80</span>    <span class="dim">rewritten to public</span></pre>
+
+    <p>Your home router does this every day. Your laptop reaches the
+    internet; the internet cannot reach your laptop. <strong>Nobody wrote a
+    firewall rule for that.</strong></p>
+
+    <pre class="box">the router keeps a note:
+  <span class="dim">"I sent a request to example.com on behalf of 192.168.31.9"</span>
+
+a reply to something I sent       <span class="g">a note exists  → forwarded</span>
+an unexpected inbound connection  <span class="r">no note        → dropped</span></pre>
+
+    <div class="callout">
+      <p class="big">One-way is a side effect of the rewriting, not a policy.</p>
+      <p>Outbound works because a note exists. Inbound fails because one
+      does not. Nobody designed a rule for it — the asymmetry falls out of
+      how translation works.</p>
+    </div>
+
+    <p>That rewriting is <strong>NAT</strong>. AWS sells it as a managed
+    service, the NAT gateway. Same job as the box on your wall.</p>
+  </section>
+
+  <section>
+    <h2>A public IP and a route are two different things</h2>
+    <p class="sub">Would a NAT gateway work in a private subnet, if you gave
+    it an Elastic IP? No — and the reason matters.</p>
+
+    <pre class="box">NAT asks:     where does 104.20.23.154 go?
+route table:  10.0.0.0/16 local ... and nothing else
+              <span class="r">→ dropped</span></pre>
+
+    <p>It has a perfectly good public address and no road.</p>
+
+    <div class="callout">
+      <p class="big">A street address on a house with no road to it.</p>
+      <p>The postman knows where you live and still cannot get there — and
+      you cannot leave either.</p>
+    </div>
+
+    <h3 class="minor">Both halves of the rule</h3>
+    <pre class="box">route, no public IP   <span class="dim">can go out via NAT, cannot be reached</span>
+public IP, no route   <span class="r">nothing works at all</span>
+both                  <span class="dim">reachable both ways</span>
+neither               <span class="dim">sealed</span></pre>
+
+    <p><strong>Every "is this reachable?" question in AWS is these two
+    switches.</strong> The NAT lives in a public subnet precisely because
+    that is where both are satisfied.</p>
+  </section>
+
+  <section>
+    <h2>The single-AZ failure, and why AWS added a fix</h2>
+    <p class="sub">The console now offers Regional and Zonal modes. Zonal
+    was chosen deliberately.</p>
+
+    <pre class="box">my-nat lives in public-1a <span class="dim">(building A)</span>
+private-1b routes 0.0.0.0/0 → my-nat
+
+building A fails
+  → the NAT is gone
+  → private-1b has a route pointing at nothing
+  → <span class="r">building B is healthy and its servers are cut off anyway</span></pre>
+
+    <h3 class="minor">The classic fix, and the exam answer</h3>
+    <pre class="box">public-1a  →  nat-1a       private-rt-a  →  0.0.0.0/0 → nat-1a
+public-1b  →  nat-1b       private-rt-b  →  0.0.0.0/0 → nat-1b</pre>
+
+    <p><strong>One NAT per AZ, one private route table per AZ.</strong> Cost:
+    two NAT gateways, roughly $64/month — which is why many small setups
+    knowingly accept the risk and run one. A real trade-off, not an obvious
+    win.</p>
+
+    <p>Regional mode is AWS solving this inside the product. Worth knowing
+    it exists; not worth learning instead of the zonal model, which is what
+    the exam was written around.</p>
+  </section>
+
+  <section>
+    <h2>Two guards, and only one takes notes</h2>
+    <p class="sub">Every conversation has two directions. The question is
+    whether you need a rule for each. Switch between them.</p>
+
+    <div class="guard">
+      <div class="gtabs" id="gtabs"></div>
+      <div class="rules" id="rules"></div>
+      <div class="flow" id="flow"></div>
+      <p class="gnote" id="gnote"></p>
+    </div>
+
+    <h3 class="minor">Why it is called stateful</h3>
+    <pre class="box"><span class="g">a guard who takes notes</span>
+  visitor arrives   <span class="dim">→ on the list → let in, and write it down</span>
+  visitor leaves    <span class="dim">→ check the notebook → let out</span>
+
+<span class="c">a guard with no notes</span>
+  visitor arrives   <span class="dim">→ on the IN list → let in</span>
+  visitor leaves    <span class="dim">→ no memory → check a separate OUT list → </span><span class="r">blocked</span></pre>
+
+    <div class="callout">
+      <p class="big">Forgetting the second NACL rule is one of the most common AWS mistakes.</p>
+      <p>The request arrives, the reply is silently dropped, the page never
+      loads — and the inbound rule sits there looking completely correct.
+      With a security group that cannot happen.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>The other three differences</h2>
+
+    <div class="vs">
+      <div class="card sg">
+        <h4>security group</h4>
+        <p class="when">attached to a resource</p>
+        <ul>
+          <li><strong>Stateful</strong> — replies are automatic</li>
+          <li>Guards one server's door</li>
+          <li><strong>Allow only</strong> — cannot deny</li>
+          <li>No order; any allow is enough</li>
+          <li>Default: deny in, allow out</li>
+        </ul>
+      </div>
+      <div class="card nacl">
+        <h4>NACL</h4>
+        <p class="when">attached to a subnet</p>
+        <ul>
+          <li><strong>Stateless</strong> — both directions needed</li>
+          <li>Guards the whole street entrance</li>
+          <li><strong>Allow and deny</strong></li>
+          <li>Numbered; <strong>first match wins</strong></li>
+          <li>Default: allow everything, both ways</li>
+        </ul>
+      </div>
+    </div>
+
+    <p>Two servers in one subnet can have completely different rules,
+    because each has its own guard at its own door. The subnet does not
+    decide.</p>
+
+    <h3 class="minor">Order matters enormously on a NACL</h3>
+    <pre class="box"><span class="g">rule 100   DENY   203.0.113.50</span>     <span class="dim">matched first → stop</span>
+rule 200   ALLOW  0.0.0.0/0        <span class="dim">never read for that address</span>
+
+<span class="r">rule 100   ALLOW  0.0.0.0/0</span>        <span class="dim">matches everyone, including the bad one</span>
+rule 200   DENY   203.0.113.50     <span class="dim">never reached. the block does nothing.</span></pre>
+
+    <p>Security groups have no order — all rules are evaluated and any allow
+    is sufficient. That is what makes several of them safe to attach at
+    once.</p>
+
+    <div class="callout">
+      <p class="big">A security group cannot say "block this one address".</p>
+      <p>Same shape as IAM: Allow grants, Deny blocks, and you need Deny to
+      build a guardrail. NACLs exist for exactly what security groups
+      structurally cannot do.</p>
+    </div>
+
+    <h3 class="minor">The layers, outside in</h3>
+    <pre class="box">internet
+   ▼
+<span class="b">route table</span>      <span class="dim">does a path exist?</span>
+   ▼
+<span class="c">NACL</span>             <span class="dim">subnet border    stateless, ordered, can deny</span>
+   ▼
+<span class="g">security group</span>   <span class="dim">the door         stateful, unordered, allow-only</span>
+   ▼
+the server</pre>
+    <p><strong>Any one says no and it is blocked.</strong> Checking them
+    outside-in is the professional diagnostic order.</p>
+
+    <h3 class="minor">Which to actually use</h3>
+    <pre class="box"><span class="g">security groups</span>   <span class="dim">for essentially everything</span>
+<span class="c">NACLs</span>             <span class="dim">leave at the default unless you need a blanket DENY</span></pre>
+    <p>The default NACL allows everything both ways, deliberately, so it
+    stays out of the way. Most companies never touch it.</p>
+  </section>
+
+  <section>
+    <h2>The endpoint that removes the NAT entirely</h2>
+
+    <pre class="box"><span class="dim">without:</span>  private subnet → NAT → IGW → <span class="r">the public internet</span> → S3
+<span class="dim">with:</span>     private subnet → <span class="g">endpoint → S3</span>   <span class="dim">never leaves AWS</span></pre>
+
+    <p>S3 is an AWS service in the same region. Without an endpoint the
+    traffic leaves AWS and comes straight back — paying NAT data charges
+    and crossing the public internet to reach a service next door.</p>
+
+    <h3 class="minor">Two kinds, and the difference is exam-critical</h3>
+    <pre class="box"><span class="g">Gateway</span>     S3 and DynamoDB <span class="g">only</span>.      a route table entry.   <span class="g">free</span>
+<span class="c">Interface</span>   almost everything else.   a network card with a
+                                      private IP in your subnet.  <span class="w">paid</span></pre>
+
+    <div class="callout">
+      <p class="big">Exam trap: both types now exist for S3.</p>
+      <p>A question that mentions cost wants the <strong>gateway</strong>
+      endpoint. Identical service name, very different bill.</p>
+    </div>
+
+    <h3 class="minor">It wrote its own route</h3>
+    <pre class="box"><span class="g">pl-78a54011 (…ap-south-1.s3)   →  vpce-02056949513302f39</span>   <span class="dim">Active</span>
+0.0.0.0/0                      →  nat-...                  <span class="dim">Active</span>
+10.0.0.0/16                    →  local                    <span class="dim">Active</span></pre>
+
+    <p>That first line appeared on its own. <code>pl-</code> is a
+    <strong>prefix list</strong> — AWS's managed list of every IP range S3
+    uses in this region, kept updated by AWS. You reference the list, never
+    the addresses.</p>
+
+    <p><strong>Most specific wins</strong>, so S3 traffic silently takes the
+    free private path and everything else still goes via NAT. The same rule
+    from day 3, now doing real work.</p>
+  </section>
+
+  <section>
+    <h2>Teardown, and two things it teaches</h2>
+
+    <h3 class="minor">Blackhole</h3>
+    <pre class="box">0.0.0.0/0    nat-0a27882dca7762a5f    <span class="w">⚠️ Blackhole</span></pre>
+    <p>A route pointing at something that no longer exists. Traffic matches
+    the rule and then evaporates, with no error anywhere.</p>
+    <p><strong>In a real job, "blackhole" in a route table is frequently the
+    answer to "it worked yesterday".</strong></p>
+
+    <h3 class="minor">Elastic IPs charge when idle</h3>
+    <pre class="box">attached to something running   <span class="g">free</span>
+sitting unattached              <span class="w">~$3.60/month</span></pre>
+    <p>Deleting the NAT leaves its address allocated and billing.
+    <strong>This is the one people forget.</strong> AWS charges for
+    held-but-unused public addresses deliberately — IPv4 addresses are
+    scarce, and hoarding should cost something.</p>
+
+    <h3 class="minor">End state</h3>
+    <div class="done">
+      <div class="drow"><span>✓</span><span><code>my-vpc</code>, subnets, route tables, <code>my-igw</code> — free</span></div>
+      <div class="drow"><span>✓</span><span><code>s3-endpoint</code> (Gateway) — free</span></div>
+      <div class="drow x"><span>✗</span><span><code>my-nat</code> — deleted</span></div>
+      <div class="drow x"><span>✗</span><span>blackhole route — removed</span></div>
+      <div class="drow x"><span>✗</span><span>Elastic IP — released</span></div>
+    </div>
+    <p style="margin-top:16px"><strong>The private subnets now reach S3 and
+    nothing else.</strong> No internet, no NAT, no cost — and a lot of real
+    architectures look exactly like this.</p>
+  </section>
+
+  <section>
+    <h2>Words you now own</h2>
+    <dl class="vocab">
+      <div class="vrow"><dt>NAT</dt><dd>Rewriting the sender address at a boundary. Outbound-only falls out of it.</dd></div>
+      <div class="vrow"><dt>NAT gateway</dt><dd>AWS's managed NAT. Lives in a public subnet, needs an Elastic IP.</dd></div>
+      <div class="vrow"><dt>Elastic IP</dt><dd>A public address you own. Free while attached, charged while idle.</dd></div>
+      <div class="vrow"><dt>security group</dt><dd>Firewall on a resource. Stateful, allow-only, unordered.</dd></div>
+      <div class="vrow"><dt>stateful</dt><dd>Replies are allowed automatically because the request was.</dd></div>
+      <div class="vrow"><dt>NACL</dt><dd>Firewall on a subnet. Stateless, allow and deny, numbered.</dd></div>
+      <div class="vrow"><dt>stateless</dt><dd>No memory. Each direction needs its own rule.</dd></div>
+      <div class="vrow"><dt>VPC endpoint</dt><dd>A private door from your VPC to an AWS service.</dd></div>
+      <div class="vrow"><dt>gateway endpoint</dt><dd>S3 and DynamoDB only. A route table entry. Free.</dd></div>
+      <div class="vrow"><dt>interface endpoint</dt><dd>Most other services. A network card in your subnet. Paid.</dd></div>
+      <div class="vrow"><dt>prefix list</dt><dd>An AWS-maintained list of IP ranges you reference by name.</dd></div>
+      <div class="vrow"><dt>blackhole</dt><dd>A route whose target no longer exists. Traffic vanishes silently.</dd></div>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Test yourself</h2>
+    <ol class="qs">
+      <li>Why is adding <code>0.0.0.0/0 → internet gateway</code> the wrong fix for a private subnet?</li>
+      <li>Your laptop reaches the internet but the internet cannot reach your laptop. Explain the mechanism — and why no firewall rule is involved.</li>
+      <li>Would a NAT gateway work in a private subnet if you gave it an Elastic IP? Explain precisely.</li>
+      <li>Name the two independent things required before anything is reachable from the internet.</li>
+      <li>Your NAT is in <code>public-1a</code>. Building A fails. What happens to <code>private-1b</code>, and why is that surprising?</li>
+      <li>What is the standard fix, and what does it cost?</li>
+      <li>You allow port 443 inbound on a security group. Do you need an outbound rule? What about on a NACL?</li>
+      <li>Why are NACLs stateless while security groups are stateful? Give the design reason, not just the fact.</li>
+      <li>You want to block one specific IP address. Which tool, and why can't the other one do it?</li>
+      <li>A NACL has <code>100 ALLOW 0.0.0.0/0</code> and <code>200 DENY 1.2.3.4</code>. Is 1.2.3.4 blocked?</li>
+      <li>Something can't connect to your server. Name the three things you check, in order.</li>
+      <li>Why is a gateway endpoint free when an interface endpoint is not?</li>
+      <li>Both endpoint types exist for S3. How do you tell which an exam question wants?</li>
+      <li>What is a <code>pl-</code> prefix list, and why reference one instead of IP ranges?</li>
+      <li>You delete a NAT gateway. What two things are left behind, and what does each cost you?</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>Carried forward</h2>
+    <dl class="vocab">
+      <div class="vrow"><dt>security groups, for real</dt><dd>Day 5 — attached to a server, then deliberately broken.</dd></div>
+      <div class="vrow"><dt>ports 1024-65535</dt><dd>Day 5 — why NACL outbound rules need that range.</dd></div>
+      <div class="vrow"><dt>one NAT per AZ</dt><dd>Day 14 — making the whole stack survive a building failure.</dd></div>
+      <div class="vrow"><dt>PrivateLink</dt><dd>Day 24 — connecting VPCs and on-premises networks.</dd></div>
+    </dl>
+  </section>
+
+</main>
+
+<footer class="wrap foot">
+  <span>Day 4 of 30 · notes in <code>docs/week-1-foundations/</code></span>
+  <span class="muted"><a href="plan.html" style="color:inherit">The plan</a></span>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var THEME = "netcurriculum.theme";
+  try {
+    var saved = localStorage.getItem(THEME);
+    if (saved) document.documentElement.dataset.theme = saved;
+  } catch (e) { /* storage may be blocked; the page still works */ }
+  document.getElementById("theme").addEventListener("click", function () {
+    var next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+    document.documentElement.dataset.theme = next;
+    try { localStorage.setItem(THEME, next); } catch (e) { /* ignore */ }
+  });
+
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+
+  /* ---------- stateful vs stateless guard ----------
+     Same single rule written by the user in both cases. The security group
+     supplies the return path from its connection table; the NACL does not,
+     which is the whole point. */
+  var MODE = "sg";
+  var gtabs = document.getElementById("gtabs");
+  var rulesEl = document.getElementById("rules");
+  var flowEl = document.getElementById("flow");
+  var gnote = document.getElementById("gnote");
+
+  var TABS = [
+    { id: "sg",       label: "Security group",   hint: "stateful - takes notes" },
+    { id: "nacl-bad", label: "NACL, inbound only", hint: "the common mistake" },
+    { id: "nacl-ok",  label: "NACL, both rules", hint: "what it actually needs" }
+  ];
+
+  TABS.forEach(function (t) {
+    var b = el("button", "gtab");
+    b.type = "button";
+    b.appendChild(document.createTextNode(t.label));
+    b.appendChild(el("small", null, t.hint));
+    b.addEventListener("click", function () { MODE = t.id; draw(); });
+    b.dataset.id = t.id;
+    gtabs.appendChild(b);
+  });
+
+  function mkRule(cls, dir, text, state) {
+    var r = el("div", "rule " + cls);
+    r.appendChild(el("span", "dir", dir));
+    r.appendChild(el("span", null, text));
+    r.appendChild(el("span", "state", state));
+    return r;
+  }
+
+  function mkStep(cls, lbl, text, verdict) {
+    var s = el("div", "step2 " + cls);
+    s.appendChild(el("span", "lbl", lbl));
+    s.appendChild(el("span", null, text));
+    s.appendChild(el("span", "vd", verdict));
+    return s;
+  }
+
+  function draw() {
+    Array.prototype.forEach.call(gtabs.children, function (b) {
+      b.setAttribute("aria-pressed", b.dataset.id === MODE ? "true" : "false");
+    });
+
+    rulesEl.innerHTML = "";
+    flowEl.innerHTML = "";
+
+    rulesEl.appendChild(mkRule("have", "inbound", "allow TCP 443 from 0.0.0.0/0", "you wrote this"));
+
+    if (MODE === "sg") {
+      rulesEl.appendChild(mkRule("auto", "outbound", "(the reply)", "automatic"));
+      flowEl.appendChild(mkStep("pass", "request in", "someone loads your page", "allowed"));
+      flowEl.appendChild(mkStep("pass", "reply out", "your server answers", "allowed"));
+      gnote.innerHTML = "<b>One rule, and the conversation works.</b> The security group recorded that the connection was allowed in, so the response is allowed out without being mentioned anywhere. A TCP exchange is many packets in both directions — you would be writing rules all day otherwise.";
+    } else if (MODE === "nacl-bad") {
+      rulesEl.appendChild(mkRule("miss", "outbound", "nothing", "missing"));
+      flowEl.appendChild(mkStep("pass", "request in", "someone loads your page", "allowed"));
+      flowEl.appendChild(mkStep("fail", "reply out", "your server answers", "BLOCKED"));
+      gnote.innerHTML = "<b>The request arrives and the reply is silently dropped.</b> The page never loads, nothing errors, and the inbound rule sits there looking completely correct. This is one of the most common AWS mistakes — and with a security group it cannot happen.";
+    } else {
+      rulesEl.appendChild(mkRule("have", "outbound", "allow TCP 1024-65535 to 0.0.0.0/0", "you wrote this too"));
+      flowEl.appendChild(mkStep("pass", "request in", "someone loads your page", "allowed"));
+      flowEl.appendChild(mkStep("pass", "reply out", "your server answers", "allowed"));
+      gnote.innerHTML = "<b>Two rules, and the second one looks strange.</b> The reply goes back to whichever high-numbered port the client happened to open, not to 443 — so the outbound rule has to permit that whole range. Why the range is 1024-65535 is day 5.";
+    }
+  }
+  draw();
+})();
+</script>
+</body>
+</html>

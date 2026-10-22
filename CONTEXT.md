@@ -11,9 +11,9 @@ Updated at the end of each day.
 
 | | |
 |---|---|
-| **Day** | 3 of 30 complete |
-| **Last completed** | `01-03` A VPC from scratch |
-| **Next** | `01-04` NAT, security groups, NACLs, VPC endpoints — **first day that costs money** |
+| **Day** | 4 of 30 complete |
+| **Last completed** | `01-04` NAT, security groups, NACLs, endpoints |
+| **Next** | `01-05` EC2 — instances, EBS, AMIs, user data, and security groups for real |
 | **Started** | 2026-10-21 |
 | **Target** | AWS Solutions Architect Associate level by ~2026-11-20 |
 
@@ -183,6 +183,7 @@ route tables → VPC route tables (day 3); ports and TCP → security groups
 | 2 | `01-02` IAM in depth | 2026-10-22 | Policies, roles, MFA enforcement, budget breaker. All tested, not assumed. |
 | 3 | `01-03` A VPC from scratch | 2026-10-22 | VPC, 4 subnets, IGW, public route table. Built by hand, no wizard. |
 | 3+ | Subnetting deep dive | 2026-10-23 | Asked for extra depth. Drilled size-to-slash until automatic. |
+| 4 | `01-04` NAT, security, endpoints | 2026-10-23 | NAT built and torn down same day. S3 gateway endpoint kept. |
 
 ---
 
@@ -224,7 +225,15 @@ my-vpc               10.0.0.0/16, built by hand on day 3
   private-1b         10.0.12.0/24  ap-south-1b   → main rt (sealed)
 my-igw               attached to my-vpc
 public-rt            0.0.0.0/0 → my-igw, associated with the 2 public subnets
+private-rt           associated with the 2 private subnets.
+                     Its 0.0.0.0/0 → NAT route was DELETED with the NAT.
+s3-endpoint          Gateway endpoint, free, wrote its own route into
+                     private-rt: pl-78a54011 → vpce-02056949513302f39
 ```
+
+**Current private subnet reachability: S3 only.** No internet, no NAT, no
+cost. Add a NAT back (and the `0.0.0.0/0` route) on any day that needs
+general outbound from a private subnet — and delete it the same day.
 
 Addressing scheme: **low numbers public (1.x, 2.x), teens private (11.x,
 12.x)**. Keep it for every future subnet.
@@ -269,3 +278,7 @@ Cost budget already claimed.
   F5**, since changing only the `#` fragment does not reload.
 - **Total spend as of day 3: USD 0.00.** Everything built so far is free,
   including the budget action whose cost was uncertain.
+- The console now offers **Regional vs Zonal** NAT gateways. Zonal was
+  chosen deliberately: the exam was written around the zonal model, and the
+  single-AZ failure is the lesson. Regional mode is newer than the exam
+  material.
