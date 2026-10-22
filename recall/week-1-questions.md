@@ -125,3 +125,25 @@ return tomorrow.
 39. On day 1 we concluded billing access was already enabled because the
     Budgets page loaded. It was not. What was wrong with that test, and what
     is the general lesson?
+
+### Subnetting drills — do these cold, no notes
+
+40. Give the slash for each: 128, 32, 512, 16, 64, 256, 1024 addresses.
+
+41. How many *usable* addresses in a `/26`? A `/23`? Why not the full count?
+
+42. You need 100 servers in one subnet. Smallest size that fits, and why
+    not the next one down?
+
+43. Split `10.0.7.0/24` into eight subnets. What slash, and what are the
+    first four starting addresses?
+
+44. Is `10.0.1.100` inside `10.0.1.64/26`? Show how you decided.
+
+45. Why is `10.0.1.50/26` invalid?
+
+46. Four subnets of ~250 servers each. Subnet size, total space, and the
+    smallest VPC CIDR that fits.
+
+47. The exam answer to 46 and the real-world answer differ. Say both, and
+    say why.

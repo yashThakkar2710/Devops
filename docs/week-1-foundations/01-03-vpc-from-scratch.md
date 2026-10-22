@@ -128,6 +128,145 @@ down. `/32` means everything is fixed, so exactly one address.
 `/0` means *nothing* is fixed, so it matches every address that exists —
 which is why `0.0.0.0/0` is the catch-all.
 
+## 2a. Subnetting, properly
+
+Added after the main build, because fluency here is assumed by every later
+day — NAT, load balancers, databases, peering all start with "how do I split
+this".
+
+### An address is 32 switches, not 4 numbers
+
+```
+192  .  168  .  31  .  9
+8 bits  8 bits 8 bits 8 bits   = 32 bits
+```
+
+**The slash counts bits, not numbers.** `/24` means the first 24 bits are
+fixed, which happens to be three whole numbers — which is why `/8`, `/16`
+and `/24` feel clean. A slash can be anything from 0 to 32, and the ones
+that land mid-number are where AWS actually lives.
+
+### Size and slash: one relationship
+
+```
+addresses = 2 ^ (32 - slash)
+```
+
+In practice, don't compute powers. **Anchor at `/24` = 256 and count steps:**
+
+```
+256  →  /24       halve the size, add 1 to the slash
+128  →  /25       double the size, subtract 1
+ 64  →  /26
+ 32  →  /27
+ 16  →  /28
+```
+
+```
+512  →  /23
+1,024 → /22
+2,048 → /21
+4,096 → /20
+65,536 → /16
+```
+
+Counting steps from a known anchor is far more reliable than recalling
+powers of two, and it is the method that survives exam pressure.
+
+### AWS reserves five addresses per subnet
+
+```
+x.x.x.0     network address
+x.x.x.1     the VPC router
+x.x.x.2     DNS
+x.x.x.3     reserved for future use
+x.x.x.255   broadcast
+```
+
+```
+usable = total − 5
+```
+
+| Subnet | Total | Usable |
+|---|---|---|
+| `/28` | 16 | 11 |
+| `/27` | 32 | 27 |
+| `/26` | 64 | 59 |
+| `/24` | 256 | 251 |
+| `/23` | 512 | 507 |
+
+**`/28` is the smallest subnet AWS permits; `/16` the largest.** A `/24`
+gives 251 usable, not 256 — a sizing done by instinct rather than
+arithmetic fails at server number 252.
+
+### Splitting a block: three steps
+
+```
+1. how many pieces do I want?
+2. total ÷ pieces = size of each
+3. what slash is that size?  then count up by that size
+```
+
+Splitting `10.0.1.0/24` into four:
+
+```
+256 ÷ 4 = 64 each  →  /26  →  block size 64
+
+10.0.1.0/26      .0   – .63
+10.0.1.64/26     .64  – .127
+10.0.1.128/26    .128 – .191
+10.0.1.192/26    .192 – .255
+```
+
+```
+more pieces → each smaller → bigger slash number
+every doubling of the piece count adds 1 to the slash
+```
+
+Pieces must start on clean boundaries — `10.0.1.50/26` is rejected. They
+tile the space, each beginning exactly where the last ended.
+
+### The address says where; the slash says how far
+
+The most common slip is getting the starting addresses right and attaching
+the wrong slash:
+
+```
+10.0.5.0/25     starts at .0, extends 128  →  .0 to .127     correct
+10.0.5.0/24     starts at .0, extends 256  →  .0 to .255     claims everything
+```
+
+Both halves of the answer can be right while the label is wrong, and the
+result is subnets that overlap. AWS rejects it, but on paper it looks fine.
+
+### A worked design
+
+> Six subnets, about 500 servers each.
+
+```
+1. per subnet:  500 + 5 reserved = 505 minimum
+2. slash:       /24 = 251 usable, too small
+                /23 = 507 usable  ✅
+3. total:       6 × 512 = 3,072
+4. VPC:         /21 = 2,048 too small
+                /20 = 4,096  ✅
+```
+
+```
+VPC      10.0.0.0/20
+subnets  6 × /23, block size 512 → third number jumps by 2
+
+10.0.0.0/23   10.0.2.0/23   10.0.4.0/23
+10.0.6.0/23   10.0.8.0/23   10.0.10.0/23
+```
+
+**And in practice you would still choose `/16`.** The exam asks for the
+minimum; real life asks what you will not regret. Unused addresses cost
+nothing, a VPC can never be enlarged, and being wrong is cheap in one
+direction and unfixable in the other.
+
+That is why this VPC is `10.0.0.0/16` despite needing a fraction of it.
+
 ### 2.5 VPC and subnet
 
 ```

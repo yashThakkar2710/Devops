@@ -258,3 +258,44 @@ route to IGW from a private subnet → works BOTH ways. not what you want.
 
 **Free while idle:** VPC, subnets, route tables, internet gateway.
 **Not free:** NAT gateway (~$32/mo), Elastic IPs when unattached.
+
+### Subnetting — the lookup to know cold
+
+```
+256 → /24     anchor. halve the size, add 1 to the slash.
+128 → /25
+ 64 → /26
+ 32 → /27
+ 16 → /28
+
+512 → /23     double the size, subtract 1
+1,024 → /22
+2,048 → /21
+4,096 → /20
+65,536 → /16
+```
+
+**AWS reserves 5 per subnet:** `usable = total − 5`
+```
+/28 → 11    /27 → 27    /26 → 59    /24 → 251    /23 → 507
+```
+Smallest allowed `/28`, largest `/16`.
+
+**Splitting:**
+```
+1. how many pieces?
+2. total ÷ pieces = size of each
+3. what slash is that size? then count up by that size
+
+/24 into 4:  256 ÷ 4 = 64 → /26 → starts at 0, 64, 128, 192
+```
+
+**The slip to avoid:**
+```
+the ADDRESS says where it starts
+the SLASH says how far it extends
+10.0.5.0/25 covers .0–.127     10.0.5.0/24 covers .0–.255
+```
+
+**Sizing a VPC:** the exam wants the minimum. Real life wants `/16` —
+unused addresses are free and a VPC can never be enlarged.

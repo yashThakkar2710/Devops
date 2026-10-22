@@ -64,6 +64,26 @@
   .slashout b { display: block; font-family: var(--mono); font-size: 21px; letter-spacing: -.01em; }
   .slashout span { font-size: 13.5px; color: var(--ink-dim); }
 
+  /* subnet splitter */
+  .split { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; }
+  .splitctl { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; font-size: 13px; color: var(--ink-dim); }
+  .splitctl select, .splitctl input {
+    font: inherit; font-size: 13px; padding: 6px 9px; background: var(--panel-2);
+    color: var(--ink); border: 1px solid var(--line); border-radius: 6px;
+  }
+  .splitctl select:focus-visible, .splitctl input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .bar2 { display: flex; height: 34px; border-radius: 7px; overflow: hidden; border: 1px solid var(--line); margin-bottom: 14px; }
+  .piece { border-right: 1px solid var(--bg); display: grid; place-items: center; font-family: var(--mono); font-size: 10.5px; color: #0d1117; font-weight: 600; }
+  .piece:last-child { border-right: 0; }
+  .pieces { display: grid; gap: 6px; }
+  .prow { display: grid; grid-template-columns: 1.2ch 1fr 1fr 8ch; gap: 12px; align-items: baseline; font-family: var(--mono); font-size: 12.5px; }
+  .prow i { width: 10px; height: 10px; border-radius: 3px; display: block; }
+  .prow .cidr { color: var(--ink); }
+  .prow .range { color: var(--ink-dim); }
+  .prow .use { color: var(--ink-faint); text-align: right; }
+  .splitnote { margin: 14px 0 0; font-size: 13.5px; color: var(--ink-dim); }
+  .splitnote b { color: var(--ink); }
+
   /* vpc diagram with toggle */
   .vpcbox { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; }
   .azrow { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px,1fr)); gap: 14px; }
@@ -269,6 +289,80 @@ subnet  one street in it    <span class="b">10.0.1.0/24</span>    256 addresses<
     <p>Chosen at creation, fixed forever. Blocks can be added; the first one
     cannot be altered or shrunk. Choose generously — unused addresses cost
     nothing, and a <code>/24</code> VPC runs out.</p>
+  </section>
+
+  <section>
+    <h2>Splitting a block</h2>
+    <p class="sub">Knowing sizes is half of it. Carving a block into pieces
+    that do not overlap is the half that matters. Change the numbers and
+    watch.</p>
+
+    <div class="split">
+      <div class="splitctl">
+        <label for="base">split</label>
+        <input id="base" type="text" value="10.0.1.0" size="11" spellcheck="false">
+        <select id="basepfx">
+          <option value="24" selected>/24</option>
+          <option value="23">/23</option>
+          <option value="22">/22</option>
+        </select>
+        <label for="pieces">into</label>
+        <select id="pieces">
+          <option value="2">2 pieces</option>
+          <option value="4" selected>4 pieces</option>
+          <option value="8">8 pieces</option>
+          <option value="16">16 pieces</option>
+        </select>
+      </div>
+
+      <div class="bar2" id="bar2"></div>
+      <div class="pieces" id="plist"></div>
+      <p class="splitnote" id="splitnote"></p>
+    </div>
+
+    <h3 class="minor">The method is three steps</h3>
+    <pre class="box">1. how many pieces do I want?
+2. total <span class="dim">/</span> pieces = size of each
+3. what slash is that size?   <span class="dim">then count up by that size</span></pre>
+
+    <pre class="box">256 <span class="dim">-&gt;</span> /24   <span class="dim">anchor. halve the size, add 1 to the slash.</span>
+128 <span class="dim">-&gt;</span> /25
+ 64 <span class="dim">-&gt;</span> /26
+ 32 <span class="dim">-&gt;</span> /27
+ 16 <span class="dim">-&gt;</span> /28</pre>
+
+    <p><strong>Do not compute powers of two &mdash; count steps from the
+    anchor.</strong> That method survives exam pressure; recalling
+    <code>2^n</code> under time does not.</p>
+
+    <h3 class="minor">AWS takes five addresses from every subnet</h3>
+    <pre class="box">x.x.x.0     network address
+x.x.x.1     the VPC router
+x.x.x.2     DNS
+x.x.x.3     reserved
+x.x.x.255   broadcast
+<span class="w">usable = total - 5</span></pre>
+    <p>A <code>/24</code> gives <strong>251</strong> usable, not 256.
+    Smallest subnet AWS permits is <code>/28</code> (11 usable); largest is
+    <code>/16</code>. Size by instinct rather than arithmetic and you
+    discover the problem at server number 252.</p>
+
+    <h3 class="minor">The slip worth noticing now</h3>
+    <pre class="box"><span class="g">10.0.5.0/25</span>   starts at .0, extends 128  <span class="dim">-&gt; .0 to .127</span>
+<span class="r">10.0.5.0/24</span>   starts at .0, extends 256  <span class="dim">-&gt; .0 to .255, the whole street</span></pre>
+    <p>The <strong>address</strong> says where a subnet starts. The
+    <strong>slash</strong> says how far it extends. Getting the starting
+    addresses right and the slash wrong produces subnets that overlap &mdash;
+    and on paper it looks completely fine.</p>
+
+    <div class="callout">
+      <p class="big">The exam wants the minimum. Real life wants what you will not regret.</p>
+      <p>Six subnets of 500 servers needs <code>/23</code> each and a
+      <code>/20</code> VPC &mdash; that is the exam answer. In practice you
+      still choose <code>/16</code>: unused addresses cost nothing, a VPC can
+      never be enlarged, and being wrong is cheap in one direction and
+      unfixable in the other. Know both answers and why they differ.</p>
+    </div>
   </section>
 
   <section>
@@ -479,6 +573,94 @@ main route table only "local"         <span class="dim">→ both private subnets
   }
   pfx.addEventListener("input", drawSlash);
   drawSlash();
+
+  /* ---------- subnet splitter ----------
+     Shows the three-step method working: total / pieces = size, size -> slash,
+     then each piece starts one block further on. The usable column keeps the
+     five reserved addresses visible. */
+  var PAL = ["#4493f8", "#3fb950", "#a371f7", "#f0883e",
+             "#d29922", "#f778ba", "#58a6ff", "#56d364"];
+
+  var baseEl = document.getElementById("base");
+  var basePfxEl = document.getElementById("basepfx");
+  var piecesEl = document.getElementById("pieces");
+  var bar2 = document.getElementById("bar2");
+  var plist = document.getElementById("plist");
+  var splitnote = document.getElementById("splitnote");
+
+  function toInt(ip) {
+    var parts = ip.trim().split(".");
+    if (parts.length !== 4) return null;
+    var n = 0;
+    for (var i = 0; i < 4; i++) {
+      var v = parseInt(parts[i], 10);
+      if (isNaN(v) || v < 0 || v > 255 || !/^\d+$/.test(parts[i].trim())) return null;
+      n = (n * 256) + v;
+    }
+    return n;
+  }
+  function toIp(n) {
+    return [Math.floor(n / 16777216) % 256, Math.floor(n / 65536) % 256,
+            Math.floor(n / 256) % 256, n % 256].join(".");
+  }
+
+  function drawSplit() {
+    var base = toInt(baseEl.value);
+    var basePfx = parseInt(basePfxEl.value, 10);
+    var count = parseInt(piecesEl.value, 10);
+    var total = Math.pow(2, 32 - basePfx);
+    var size = total / count;
+    var newPfx = basePfx + Math.round(Math.log(count) / Math.log(2));
+
+    bar2.innerHTML = "";
+    plist.innerHTML = "";
+
+    if (base === null) {
+      splitnote.innerHTML = "<b>That is not a valid address.</b> Four numbers, each 0 to 255.";
+      return;
+    }
+
+    var snapped = Math.floor(base / total) * total;
+
+    for (var i = 0; i < count; i++) {
+      var start = snapped + (i * size);
+      var end = start + size - 1;
+      var colour = PAL[i % PAL.length];
+
+      var seg = el("div", "piece");
+      seg.style.width = (100 / count) + "%";
+      seg.style.background = colour;
+      if (count <= 8) seg.appendChild(el("span", null, String(size)));
+      bar2.appendChild(seg);
+
+      var row = el("div", "prow");
+      var sw = el("i");
+      sw.style.background = colour;
+      row.appendChild(sw);
+      row.appendChild(el("span", "cidr", toIp(start) + "/" + newPfx));
+      row.appendChild(el("span", "range", toIp(start) + "  to  " + toIp(end)));
+      row.appendChild(el("span", "use", (size - 5) + " usable"));
+      plist.appendChild(row);
+    }
+
+    var msg = "<b>" + total + " divided by " + count + " = " + size +
+      " addresses each</b>, which is <b>/" + newPfx + "</b>. Each piece starts " +
+      size + " after the one before. That jump is the block size, and it is the " +
+      "whole trick.";
+    if (snapped !== base) {
+      msg += " <b>Note:</b> the start was snapped to " + toIp(snapped) +
+        ", because pieces must tile from a clean boundary. AWS rejects anything else.";
+    }
+    if (newPfx > 28) {
+      msg += " <b>This is smaller than AWS allows</b> - /28 is the minimum subnet size.";
+    }
+    splitnote.innerHTML = msg;
+  }
+
+  baseEl.addEventListener("input", drawSplit);
+  basePfxEl.addEventListener("change", drawSplit);
+  piecesEl.addEventListener("change", drawSplit);
+  drawSplit();
 
   /* ---------- VPC reachability toggle ----------
      Two independent switches. The point is that the gateway alone changes

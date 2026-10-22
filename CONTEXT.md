@@ -182,6 +182,7 @@ route tables → VPC route tables (day 3); ports and TCP → security groups
 | 1 | `01-01` Account safety and the IAM model | 2026-10-21 | Account secured end to end. See AWS account state below. |
 | 2 | `01-02` IAM in depth | 2026-10-22 | Policies, roles, MFA enforcement, budget breaker. All tested, not assumed. |
 | 3 | `01-03` A VPC from scratch | 2026-10-22 | VPC, 4 subnets, IGW, public route table. Built by hand, no wizard. |
+| 3+ | Subnetting deep dive | 2026-10-23 | Asked for extra depth. Drilled size-to-slash until automatic. |
 
 ---
 
@@ -227,6 +228,11 @@ public-rt            0.0.0.0/0 → my-igw, associated with the 2 public subnets
 
 Addressing scheme: **low numbers public (1.x, 2.x), teens private (11.x,
 12.x)**. Keep it for every future subnet.
+
+**Subnetting is now fluent** (drilled on day 3). Anchor at `/24` = 256,
+halve the size to add 1 to the slash. `usable = total - 5`. The recurring
+slip to watch for: getting the starting addresses right and attaching the
+wrong slash, which silently produces overlapping subnets.
 
 **Not torn down, deliberately** — all of the above is free while idle and is
 the foundation for days 4 and 5. The teardown rule is about money, not
