@@ -375,6 +375,196 @@ including ones created later and forgotten about.
 
 So public subnets get their own table; private subnets stay on the main one.
 
+## 2b. Designing a VPC: the method
+
+Worked through after the build, from the question "how do we decide".
+
+### Step 1 - subnets exist because rules differ
+
+Not because of a target count. **If two things need the same rules they can
+share a subnet; if they need different rules they must be separated.**
+
+| Part | Who must reach it |
+|---|---|
+| Load balancer | the whole internet |
+| App servers | only the load balancer |
+| Database | only the app servers |
+
+Three different answers, three subnets.
+
+App and database are both private, so today their rules match. They are still
+separated, because *only the app subnet may talk to the database subnet* is a
+sentence you cannot write if they share one. **Separate what you might want to
+treat differently later.**
+
+A subnet lives in exactly one AZ, so surviving a building failure doubles the
+count: 3 purposes x 2 buildings = 6 subnets. That is why real VPCs have six and
+not three.
+
+### Step 2 - size for peak and deployments, never for today
+
+Three results that surprise people:
+
+**The load balancer subnet holds none of your servers, and still needs room.**
+An ALB consumes several addresses per subnet; AWS requires at least 8 free and
+a `/27` minimum. NAT gateways and VPC endpoints do the same. AWS services eat
+addresses you did not plan for.
+
+**The app tier is the largest, because deployments double it.** A rolling
+deployment starts the new servers *before* killing the old ones, so 40 running
+briefly becomes 80. Size for today and the deploy fails at the worst moment.
+
+**The database tier is the smallest.** Primary, standby, maybe a read replica.
+Three, perhaps five ever. It feels like the most important tier so it gets the
+biggest subnet; that is backwards. **Databases scale by getting bigger, not by
+multiplying.**
+
+```
+load balancer   /27     32 addresses
+app servers     /25    128 addresses
+database        /28     16 addresses
+```
+
+A subnet can never be resized. The asymmetry is total: generous costs nothing,
+tight is unfixable.
+
+### Step 3 - allocate largest first
+
+```
+BIGGEST FIRST                      SMALLEST FIRST
+10.0.0.0/23    B  500              10.0.0.0/25     A   60
+10.0.2.0/25    A   60              10.0.0.128/25   C   60
+10.0.2.128/25  C   60              10.0.1.0/24     -- stranded
+                                   10.0.2.0/23     B  500
+nothing wasted                     256 addresses skipped
+```
+
+Going smallest first leaves `10.0.1.0` free but unusable by a `/23`, because a
+`/23` must start on a multiple of 512 and `10.0.1.0` is 256 in. The space is
+not gone - a `/24` or smaller could still go there - but you have created a
+**hole** that only certain sizes fit. Repeat that across a real VPC and you get
+address space that is technically free and practically unusable:
+**fragmentation**, the same problem as a car park.
+
+### Step 4 - one address line, walk forward, never restart
+
+Every subnet in the VPC takes its slice from the **same single line**, in
+order. A common early mistake is restarting at `10.0.0.0` for each tier, which
+makes them all overlap.
+
+```
+10.0.0.0/25     10.0.0.0   -> 10.0.0.127   app-1a    128
+10.0.0.128/25   10.0.0.128 -> 10.0.0.255   app-1b    128
+10.0.1.0/27     10.0.1.0   -> 10.0.1.31    lb-1a      32
+10.0.1.32/27    10.0.1.32  -> 10.0.1.63    lb-1b      32
+10.0.1.64/28    10.0.1.64  -> 10.0.1.79    db-1a      16
+10.0.1.80/28    10.0.1.80  -> 10.0.1.95    db-1b      16
+```
+
+352 addresses of 65,536. Each begins exactly where the last stopped.
+
+### Alignment: why a /23 cannot start at 10.0.1.0
+
+Blocks of a given size sit in **fixed positions**, like tiles already glued
+down. A `/23` is two third-numbers, pre-paired:
+
+```
+( 0 , 1 )  ( 2 , 3 )  ( 4 , 5 )  ( 6 , 7 )
+```
+
+`10.0.1.0/23` would take half of the first pair and half of the second. The
+tiles do not slide.
+
+**The test:** divide the starting number by the block size. A whole number is
+legal.
+
+```
+/23 block 2    0 / 2 = 0     legal
+               1 / 2 = 0.5   illegal
+/26 block 64   128 / 64 = 2  legal
+               50 / 64       illegal
+```
+
+This is not an AWS policy. A router does not count addresses - it checks
+whether a fixed pattern of bits matches, which only describes a single clean
+block when the free bits start at zero. Starting mid-tile makes the match
+ambiguous. The rule holds everywhere: AWS, a home router, the internet
+backbone.
+
+### AWS does not divide the VPC by availability zone - you do
+
+The whole range of the VPC is available in every AZ. **The split happens at the
+moment you create a subnet** and choose its zone. Nothing is zone-bound before
+that.
+
+Which means the layout is a choice:
+
+```
+option A - grouped by tier        option B - a block per zone
+10.0.0.0/25    app-1a             10.0.0.0/18     everything in A
+10.0.0.128/25  app-1b             10.0.64.0/18    everything in B
+10.0.1.0/27    lb-1a              10.0.128.0/18   reserved for C
+10.0.1.32/27   lb-1b
+```
+
+**Option B is what to design on a real account.** Adding a third zone becomes
+"use the block already waiting" rather than hunting for gaps, and a rule like
+*allow all of zone A* is one line instead of six. Option A is used here only
+because it is simpler to learn with.
+
+### AZ letters are randomised per account
+
+`ap-south-1a` is not the same physical building for two different accounts.
+AWS shuffles the letters so that everyone default does not land on one
+datacenter.
+
+```
+ap-south-1a  (your name for it)   ->   aps1-az3  (the stable AZ ID)
+```
+
+When two accounts need resources in the *same* physical building, they match on
+the **AZ ID**, never the letter. Visible in the console as the "Availability
+Zone ID" column.
+
+### Why this VPC uses /24 for everything anyway
+
+The method above was not applied to the subnets built on this account - all
+four are `/24`. That is deliberate.
+
+```
+65,536 addresses available
+ 1,024 used
+   1.5% consumed
+```
+
+| | Uniform /24 | Carefully sized |
+|---|---|---|
+| Readability | `10.0.11.x` is instantly private, zone A | look each range up |
+| Adding a subnet | next free `/24`, no thought | recalculate and re-align |
+| Overlap mistakes | nearly impossible | easy |
+| Space used | wasteful | efficient |
+
+Plenty of production VPCs do exactly this, on purpose. **The sizing method is
+for when you cannot be generous** - a `/20` VPC, overlapping office ranges,
+many peered VPCs, hundreds of subnets. With 65,000 spare addresses, simplicity
+is worth more than efficiency.
+
+### Gaps between groups are deliberate
+
+```
+10.0.1.0/24     public-1a
+10.0.2.0/24     public-1b
+10.0.3.0/24  .. 10.0.10.0/24    free - room for the public tier to grow
+10.0.11.0/24    private-1a
+10.0.12.0/24    private-1b
+10.0.21.0/24    db-1a           waiting, obvious without a lookup
+```
+
+Packed tight, a third public subnet would land *after* the private ones and the
+scheme that lets an address identify itself at a glance breaks forever.
+**Leave gaps between groups. Addresses are free; a numbering scheme that stops
+making sense is not.**
+
 ## 3. What was built
 
 ```

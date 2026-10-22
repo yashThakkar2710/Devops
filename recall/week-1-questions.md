@@ -147,3 +147,36 @@ return tomorrow.
 
 47. The exam answer to 46 and the real-world answer differ. Say both, and
     say why.
+
+### VPC design method
+
+48. What is the *only* reason to put two things in separate subnets?
+
+49. App servers and the database are both private, so their rules match
+    today. Why separate them anyway?
+
+50. Why does the load balancer subnet need addresses when none of your
+    servers go in it?
+
+51. Why is the app tier usually the largest subnet, and the database the
+    smallest? Both answers surprise people.
+
+52. Lay out subnets for 500, 60 and 60 servers from `10.0.0.0`, largest
+    first. Then do it smallest first and say exactly what gets wasted.
+
+53. Why can a `/23` not start at `10.0.1.0`? Give the test you would use.
+
+54. Why is that not an AWS policy but a property of how addressing works?
+
+55. Does AWS divide a VPC address range between availability zones? When
+    does the zone actually get decided?
+
+56. Give the argument for grouping subnets by zone rather than by tier.
+
+57. Is `ap-south-1a` the same building for every AWS account? What is the
+    stable identifier, and when does the difference matter?
+
+58. Our VPC uses `/24` for every subnet, ignoring the sizing method.
+    Defend that choice, then say when it would be the wrong one.
+
+59. Why are `10.0.3.0/24` through `10.0.10.0/24` left empty on purpose?
