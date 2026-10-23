@@ -371,3 +371,111 @@ interface endpoint   ~$0.01/hr per AZ + data
 **Blackhole** in a route table = the target no longer exists. Traffic
 matches the rule and vanishes with no error. Usually the answer to
 "it worked yesterday".
+
+---
+
+## EC2, EBS and AMIs - from day 01-05
+
+**Three things required for inbound reachability - all of them:**
+```
+1. a route to the internet gateway
+2. a PUBLIC IP           <- off by default in a subnet you built
+3. a security group rule
+```
+
+**Instance type naming:**
+```
+t3.micro
+| |  `- size      nano small medium large xlarge ... (roughly doubling)
+| `---- generation
+`------ family    t burstable  m general  c compute  r memory
+                  i/d storage  g/p GPU
+```
+
+**user data vs AMI:**
+```
+user data   runs at boot, flexible, slow, can differ per instance
+AMI         prepared in advance, fixed, fast, every copy identical
+
+AMI        things that DON'T change   nginx, your app, libraries
+user data  things that DO change      hostname, environment, config
+```
+An AMI captures FILES, not the scripts that wrote them.
+
+**EBS:**
+```
+a disk on the NETWORK. lives in ONE AZ. outlives the instance.
+gp3  default answer          io2  guaranteed IOPS, databases
+st1  sequential throughput   sc1  cold, cheapest
+
+instance store = physically inside the host, WIPED on stop
+```
+
+**Snapshots:**
+```
+volume   = one AZ
+snapshot = REGIONAL     <- this is how you move a disk between AZs
+incremental: only changed blocks. deleting an old one is safe.
+```
+
+**AMI vs snapshot:**
+```
+AMI       instructions (boot from snap-xxx)
+snapshot  the bytes
+deregistering an AMI does NOT delete its snapshot
+"delete associated snapshots" is UNCHECKED by default
+```
+
+**DeleteOnTermination:**
+```
+root volume    true    goes with the instance
+extra volumes  false   survive, billing quietly
+```
+
+**Purchasing:**
+```
+On-Demand        per second, no commitment
+Reserved         1 or 3 years, ~40-60% off
+Savings Plans    commit $/hour, ~40-70%, flexible (also Lambda/Fargate)
+Spot             up to 90% off, 2 minutes notice  -> interruptible work only
+Dedicated Host   per-socket licensing
+```
+
+**Diagnosis - the most useful table in networking:**
+```
+hangs then times out       nothing replied   -> firewall / wrong IP / no route
+"connection refused" fast  something replied -> network FINE, app is DOWN
+"could not resolve host"   DNS               -> never got as far as connecting
+```
+Security groups and NACL denies always DROP, never reject.
+
+**SSH to an instance:**
+```
+chmod 400 my-key.pem                      ssh refuses world-readable keys
+ssh -i my-key.pem ec2-user@<public-ip>    ec2-user on Amazon Linux
+                                          ubuntu on Ubuntu, admin on Debian
+```
+Windows / Git Bash, if chmod does not take:
+```
+icacls my-key.pem /inheritance:r
+icacls my-key.pem /grant:r "$USERNAME:R"
+```
+
+**From inside an instance:**
+```
+systemctl status nginx       is the service running
+sudo ss -tlnp | grep :80     is anything LISTENING, and on which address
+curl localhost               the decisive test - no network layers involved
+```
+
+**Read a boot log without connecting:**
+```
+EC2 -> Instance -> Actions -> Monitor and troubleshoot -> Get system log
+```
+
+**Test with curl, not a browser.** Browsers do HTTPS upgrades, caching,
+prefetch and extensions. Chrome's "Always use secure connections" rewrites
+http:// to https:// and hangs if 443 is closed.
+
+**Naming:** security group names may not start with `sg-` - that prefix is
+reserved for IDs.

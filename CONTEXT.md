@@ -11,9 +11,9 @@ Updated at the end of each day.
 
 | | |
 |---|---|
-| **Day** | 4 of 30 complete |
-| **Last completed** | `01-04` NAT, security groups, NACLs, endpoints |
-| **Next** | `01-05` EC2 — instances, EBS, AMIs, user data, and security groups for real |
+| **Day** | 5 of 30 complete |
+| **Last completed** | `01-05` EC2, EBS and AMIs |
+| **Next** | `01-06` S3 — storage classes, lifecycle, versioning, bucket policies |
 | **Started** | 2026-10-21 |
 | **Target** | AWS Solutions Architect Associate level by ~2026-11-20 |
 
@@ -184,6 +184,7 @@ route tables → VPC route tables (day 3); ports and TCP → security groups
 | 3 | `01-03` A VPC from scratch | 2026-10-22 | VPC, 4 subnets, IGW, public route table. Built by hand, no wizard. |
 | 3+ | Subnetting deep dive | 2026-10-23 | Asked for extra depth. Drilled size-to-slash until automatic. |
 | 4 | `01-04` NAT, security, endpoints | 2026-10-23 | NAT built and torn down same day. S3 gateway endpoint kept. |
+| 5 | `01-05` EC2, EBS and AMIs | 2026-10-24 | Two instances, an AMI, a 7-step debugging session. All torn down. |
 
 ---
 
@@ -229,7 +230,14 @@ private-rt           associated with the 2 private subnets.
                      Its 0.0.0.0/0 → NAT route was DELETED with the NAT.
 s3-endpoint          Gateway endpoint, free, wrote its own route into
                      private-rt: pl-78a54011 → vpce-02056949513302f39
+my-key               RSA key pair, free. The .pem is in Windows Downloads
+                     — AWS gives the private half once and never again.
+web-sg               security group: 22 from home IP, 80 from 0.0.0.0/0.
+                     Free while unused. Reusable.
 ```
+
+**Day 5 was built and fully torn down** — no instances, AMIs, volumes or
+snapshots remain. Only `my-key` and `web-sg` were kept, both free.
 
 **Current private subnet reachability: S3 only.** No internet, no NAT, no
 cost. Add a NAT back (and the `0.0.0.0/0` route) on any day that needs
@@ -278,6 +286,12 @@ Cost budget already claimed.
   F5**, since changing only the `#` fragment does not reload.
 - **Total spend as of day 3: USD 0.00.** Everything built so far is free,
   including the budget action whose cost was uncertain.
+- **Chrome breaks `http://` testing on this machine.** "Always use secure
+  connections" silently rewrites to `https://`, which hangs when only port
+  80 is open. Diagnose with `curl` first; use incognito to confirm.
+- **The home IP changes.** It was `152.59.39.80` on day 1 and
+  `152.59.54.26` on day 5. Any security group rule using "My IP" will stop
+  working without warning — re-check it before assuming SSH is broken.
 - The console now offers **Regional vs Zonal** NAT gateways. Zonal was
   chosen deliberately: the exam was written around the zonal model, and the
   single-AZ failure is the lesson. Regional mode is newer than the exam

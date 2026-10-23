@@ -232,3 +232,52 @@ return tomorrow.
 
 76. You delete a NAT gateway. Name the two things left behind and what each
     costs you.
+
+## 01-05 · EC2, EBS and AMIs
+
+77. Name the three independent things required before the internet can
+    reach a server. What happens when only two are present?
+
+78. Why is auto-assign public IP off by default in a subnet you built, but
+    on in the default VPC?
+
+79. Your server reports its IP as `10.0.1.238` but you reach it at
+    `13.233.89.217`. Explain what is happening and where.
+
+80. You launch from an AMI with no user data at all, and nginx is already
+    running. Why?
+
+81. The page served by web-2 shows web-1's hostname. Explain exactly why,
+    and say what general rule that gives you about AMIs.
+
+82. When would you use user data rather than bake something into an AMI?
+    Give the Auto Scaling argument for the other direction.
+
+83. Why can an EBS volume not be attached to an instance in a different
+    availability zone - and how do you move it there anyway?
+
+84. You stop an instance. What happens to data on EBS? On instance store?
+    Why are they different?
+
+85. Why did gp3 replace gp2? What problem did gp2 create for customers?
+
+86. One connection hangs and times out; another says "connection refused"
+    instantly. What does each tell you, and why do they need opposite
+    fixes?
+
+87. Why do firewalls drop packets rather than rejecting them?
+
+88. You deregister an AMI. What is left behind, what does it cost, and why
+    does the console not clean it up by default?
+
+89. You terminate an instance with a root volume and one extra volume
+    attached. What happens to each?
+
+90. Nightly video processing that can restart if interrupted - which
+    purchasing option? Why would the same option be wrong for a database?
+
+91. Your browser times out but `curl` works from the same machine, to the
+    same address. What have you proven, and where do you look next?
+
+92. Walk the seven-step diagnosis from this day from memory. What did each
+    step eliminate?

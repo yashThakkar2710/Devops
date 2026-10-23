@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 5 · EC2, EBS and AMIs</title>
+<link rel="stylesheet" href="assets/site.css">
+<style>
+  :root {
+    --ok:   #3fb950;
+    --no:   #f85149;
+    --warn: #f0883e;
+    --cool: #a371f7;
+    --blue: #4493f8;
+  }
+  :root[data-theme="light"] {
+    --ok:   #1a7f37;
+    --no:   #cf222e;
+    --warn: #bc4c00;
+    --cool: #8250df;
+    --blue: #0969da;
+  }
+
+  .crumb { padding: 20px 0 0; font-size: 13px; }
+  .crumb a { color: var(--accent); text-decoration: none; }
+  .crumb a:hover { text-decoration: underline; }
+
+  .lede { padding: 20px 0 8px; max-width: 66ch; }
+  .lede .eyebrow { font-family: var(--mono); font-size: 12px; color: var(--ink-faint); margin: 0 0 6px; }
+  .lede h1 { margin: 0 0 10px; font-size: 27px; letter-spacing: -.02em; }
+  .lede p { margin: 0; color: var(--ink-dim); }
+
+  section { padding: 32px 0; border-top: 1px solid var(--line); }
+  section > h2 { margin: 0 0 6px; font-size: 18px; letter-spacing: -.01em; }
+  section > .sub { margin: 0 0 20px; color: var(--ink-dim); font-size: 14px; max-width: 66ch; }
+  h3.minor { margin: 26px 0 10px; font-size: 15px; }
+  p { max-width: 66ch; }
+
+  pre.box {
+    font-family: var(--mono); font-size: 12.5px; line-height: 1.65;
+    background: var(--panel-2); border: 1px solid var(--line-soft);
+    border-radius: 7px; padding: 13px; margin: 14px 0;
+    overflow-x: auto; color: var(--ink-dim);
+  }
+  pre.box .dim { color: var(--ink-faint); }
+  pre.box .g { color: var(--ok); }
+  pre.box .r { color: var(--no); }
+  pre.box .w { color: var(--warn); }
+  pre.box .c { color: var(--cool); }
+  pre.box .b { color: var(--blue); }
+
+  /* three switches */
+  .sw { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; }
+  .swrow { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .tgl {
+    font: inherit; font-size: 13px; padding: 9px 13px; cursor: pointer; text-align: left;
+    background: var(--panel-2); color: var(--ink-dim);
+    border: 1px solid var(--line); border-radius: 7px; flex: 1 1 170px;
+  }
+  .tgl[aria-pressed="true"] { color: var(--ink); border-color: color-mix(in srgb, var(--ok) 55%, var(--line)); background: color-mix(in srgb, var(--ok) 13%, transparent); }
+  .tgl:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .tgl small { display: block; font-size: 11.5px; color: var(--ink-faint); margin-top: 2px; }
+  .verdict3 { border-radius: 8px; padding: 15px 16px; border: 1px solid var(--line); background: var(--panel-2); }
+  .verdict3 b { display: block; font-family: var(--mono); font-size: 15px; margin-bottom: 5px; }
+  .verdict3 span { font-size: 13.5px; color: var(--ink-dim); }
+  .verdict3.ok b { color: var(--ok); }
+  .verdict3.no b { color: var(--no); }
+
+  /* diagnosis ladder */
+  .ladder { display: grid; gap: 8px; }
+  .lstep { display: grid; grid-template-columns: 2.5ch 1fr auto; gap: 13px; align-items: start;
+           padding: 11px 13px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+  .lstep .n { font-family: var(--mono); font-size: 12px; color: var(--ink-faint); padding-top: 2px; }
+  .lstep .what { font-size: 13.5px; }
+  .lstep .what code { font-size: 12px; }
+  .lstep .what em { display: block; color: var(--ink-dim); font-style: normal; margin-top: 3px; font-size: 13px; }
+  .lstep .res { font-family: var(--mono); font-size: 11.5px; white-space: nowrap; padding-top: 2px; }
+  .lstep.pass { border-color: color-mix(in srgb, var(--ok) 42%, var(--line)); }
+  .lstep.pass .res { color: var(--ok); }
+  .lstep.found { border-color: color-mix(in srgb, var(--warn) 50%, var(--line)); background: color-mix(in srgb, var(--warn) 9%, transparent); }
+  .lstep.found .res { color: var(--warn); }
+
+  .vs { display: grid; grid-template-columns: repeat(auto-fit, minmax(265px, 1fr)); gap: 14px; margin: 18px 0; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; }
+  .card h4 { margin: 0 0 3px; font-size: 15px; font-family: var(--mono); }
+  .card .when { margin: 0 0 12px; font-size: 12.5px; color: var(--ink-faint); }
+  .card ul { margin: 0; padding-left: 17px; font-size: 13.5px; color: var(--ink-dim); }
+  .card li { margin-bottom: 5px; }
+  .card.a h4 { color: var(--blue); }
+  .card.b h4 { color: var(--cool); }
+
+  .callout {
+    margin: 18px 0; padding: 15px 17px; border-radius: var(--radius);
+    background: color-mix(in srgb, var(--warn) 10%, var(--panel));
+    border: 1px solid color-mix(in srgb, var(--warn) 38%, var(--line));
+  }
+  .callout p { margin: 0; }
+  .callout .big { font-size: 15.5px; font-weight: 600; margin-bottom: 4px; }
+
+  .done { border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+  .drow { display: grid; grid-template-columns: 3ch 1fr; gap: 12px; padding: 9px 14px; font-size: 13.5px; border-bottom: 1px solid var(--line-soft); }
+  .drow:last-child { border-bottom: 0; }
+  .drow span:first-child { color: var(--ok); }
+  .drow.x span:first-child { color: var(--no); }
+
+  .vocab { display: grid; }
+  .vrow { display: grid; grid-template-columns: 19ch 1fr; gap: 16px; padding: 10px 0; border-bottom: 1px solid var(--line-soft); }
+  .vrow:last-child { border-bottom: 0; }
+  .vrow dt { font-size: 13.5px; color: var(--accent); font-family: var(--mono); }
+  .vrow dd { margin: 0; font-size: 13.5px; color: var(--ink-dim); }
+
+  ol.qs { margin: 0; padding-left: 20px; }
+  ol.qs li { margin-bottom: 11px; font-size: 14px; max-width: 64ch; }
+
+  .foot { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+    border-top: 1px solid var(--line); padding-top: 16px; padding-bottom: 34px;
+    font-size: 12px; color: var(--ink-faint); }
+
+  @media (max-width: 620px) {
+    .vrow { grid-template-columns: 1fr; gap: 2px; }
+    .lstep { grid-template-columns: 1fr; gap: 4px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <div class="brand"><span class="brand-mark">//</span><span>AWS in 30 days</span></div>
+    <div class="topbar-tools"><button id="theme" type="button" title="Toggle theme">◐</button></div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <p class="crumb"><a href="index.html">← Progress</a> · <a href="plan.html">The plan</a> · <a href="day-04.html">Day 4</a></p>
+
+  <div class="lede">
+    <p class="eyebrow">Week 1 · Day 5 · 01-05</p>
+    <h1>EC2, EBS and AMIs</h1>
+    <p>Everything so far has been empty plumbing. Today it carries something
+    — and the debugging session at the end turned out to be worth more than
+    the building.</p>
+  </div>
+
+  <section>
+    <h2>Three switches, all required</h2>
+    <p class="sub">Day 3 showed a route is not enough. Day 4 showed a public
+    IP is not enough. Both are true at once. Flip them.</p>
+
+    <div class="sw">
+      <div class="swrow" id="swrow"></div>
+      <div class="verdict3" id="verdict3"></div>
+    </div>
+
+    <div class="callout">
+      <p class="big">In a subnet you built yourself, auto-assign public IP is OFF by default.</p>
+      <p>AWS enables it in the <em>default</em> VPC, which is why tutorials
+      never mention it. A hand-built subnet assumes you meant to be
+      deliberate — so nothing becomes public without being asked for.</p>
+    </div>
+
+    <h3 class="minor">One machine, two addresses</h3>
+    <pre class="box"><span class="c">10.0.1.238</span>      <span class="dim">private — what it calls itself</span>
+<span class="g">13.233.89.217</span>   <span class="dim">public  — what the internet reaches</span></pre>
+    <p><strong>The instance has no idea it has a public address.</strong> The
+    internet gateway translates on the way in. Ask the server its IP and it
+    says <code>10.0.1.238</code>.</p>
+  </section>
+
+  <section>
+    <h2>User data, and what an AMI really captures</h2>
+
+    <pre class="box">#!/bin/bash
+dnf install -y nginx
+systemctl enable --now nginx
+echo "&lt;h1&gt;Hello from <span class="w">$(hostname -f)</span>&lt;/h1&gt;" &gt; /usr/share/nginx/html/index.html</pre>
+
+    <p>A script that runs <strong>once, as root</strong>, the first time an
+    instance boots — before anyone logs in. It is the beginning of
+    infrastructure as code, and it is how Auto Scaling works at all: when a
+    server is created at 3am, nobody is there to SSH in.</p>
+
+    <h3 class="minor">Then an AMI was made, and web-2 launched from it with no user data</h3>
+
+    <pre class="box">[ec2-user@<span class="b">ip-10-0-1-230</span> ~]$ curl localhost
+&lt;h1&gt;Hello from <span class="w">ip-10-0-1-238</span>.ap-south-1.compute.internal&lt;/h1&gt;</pre>
+
+    <p><strong>The machine is <code>.230</code>. The page says
+    <code>.238</code>.</strong> That is web-1's name.</p>
+
+    <p>The script ran once, on web-1, and <code>$(hostname -f)</code> was
+    replaced by its answer at that moment. The file now literally contains
+    that text. <strong>The AMI copied the file, not the script that wrote
+    it.</strong></p>
+
+    <div class="callout">
+      <p class="big">Photographing a whiteboard.</p>
+      <p>Someone wrote "Today is Monday" and you took a photo. On Tuesday the
+      photo still says Monday — you captured the writing, not the person who
+      wrote it.</p>
+    </div>
+
+    <p>This is a real production problem. AWS regenerates what matters most
+    — SSH host keys, the actual hostname — but <strong>anything your script
+    wrote into a file is frozen.</strong></p>
+
+    <h3 class="minor">Which makes them different tools</h3>
+    <div class="vs">
+      <div class="card a">
+        <h4>user data</h4>
+        <p class="when">a script run at boot</p>
+        <ul>
+          <li>Flexible — change anytime</li>
+          <li>Slow — installs every boot</li>
+          <li>Can differ per instance</li>
+          <li><strong>Things that DO change</strong></li>
+        </ul>
+      </div>
+      <div class="card b">
+        <h4>AMI</h4>
+        <p class="when">a disk prepared in advance</p>
+        <ul>
+          <li>Fixed — rebuild to change</li>
+          <li>Fast — nothing to install</li>
+          <li>Every copy identical</li>
+          <li><strong>Things that DON'T change</strong></li>
+        </ul>
+      </div>
+    </div>
+    <pre class="box">Auto Scaling, a server created during a traffic spike:
+  AMI with software baked in   <span class="g">~30 seconds</span>
+  blank AMI + user data        <span class="r">~3 minutes</span>
+
+<span class="dim">three minutes is a long time when the site is overloaded</span></pre>
+  </section>
+
+  <section>
+    <h2>Storage: disks that outlive machines</h2>
+
+    <pre class="box">instance  ◄══ network ══►  EBS volume</pre>
+
+    <p><strong>EBS is a disk on the network</strong>, not a drive bolted into
+    a server. Which is why the disk and the computer have separate
+    lifetimes: terminate the instance and the volume can survive; detach it
+    and attach it elsewhere; snapshot it while it is running.</p>
+
+    <pre class="box">an EBS volume lives in <span class="w">ONE availability zone</span>
+one volume attaches to one instance at a time</pre>
+
+    <h3 class="minor">Volume types</h3>
+    <div class="done">
+      <div class="drow"><span>→</span><span><code>gp3</code> — <strong>the default answer.</strong> boot disks, most workloads</span></div>
+      <div class="drow"><span>→</span><span><code>io2</code> — databases needing guaranteed consistent IOPS</span></div>
+      <div class="drow"><span>→</span><span><code>st1</code> — big sequential throughput: logs, data processing</span></div>
+      <div class="drow"><span>→</span><span><code>sc1</code> — cheapest, rarely accessed</span></div>
+    </div>
+    <p style="margin-top:14px"><strong>gp3 replaced gp2.</strong> With gp2,
+    speed was tied to volume size, so people bought oversized disks purely to
+    get IOPS. gp3 sets size and speed separately. A question about "paying
+    for unused capacity to get performance" is pointing at gp3.</p>
+
+    <h3 class="minor">The other kind of disk</h3>
+    <pre class="box"><span class="g">EBS</span>             over the network    <span class="g">SURVIVES stop/start</span>
+<span class="r">instance store</span>  physically inside   <span class="r">WIPED on stop, permanently</span></pre>
+    <p>Extremely fast, completely temporary — it is a different physical
+    machine when it starts again.</p>
+
+    <h3 class="minor">Snapshots are the bridge between zones</h3>
+    <pre class="box">EBS volume   <span class="w">ONE availability zone</span>
+snapshot     <span class="g">REGIONAL</span></pre>
+    <p>A volume cannot be attached across AZs. Snapshot it and restore into
+    the other zone — and the same mechanism copies across regions for
+    disaster recovery.</p>
+    <p>Snapshots are <strong>incremental</strong>: the first captures
+    everything, later ones only changed blocks. Deleting an old one is safe.
+    Observed here: an 8 GiB volume produced a <strong>1.7 GiB</strong>
+    snapshot — only used blocks are stored.</p>
+
+    <h3 class="minor">AMI and snapshot are different objects</h3>
+    <pre class="box"><span class="b">AMI</span>       <span class="dim">instructions: boot from snap-xxx, 8 GiB, this is root</span>
+<span class="c">snapshot</span>  <span class="dim">the actual bytes</span></pre>
+    <div class="callout">
+      <p class="big">The "delete associated snapshots" box is unchecked by default.</p>
+      <p>Deregistering an AMI does not delete its snapshot. Click straight
+      through and the data keeps billing forever. Worth generalising:
+      <strong>on an AWS delete dialog, the default is usually the expensive
+      one.</strong></p>
+    </div>
+    <pre class="box">root volume      DeleteOnTermination = <span class="g">true</span>    <span class="dim">goes with the instance</span>
+extra volumes    DeleteOnTermination = <span class="r">false</span>   <span class="dim">survive, billing quietly</span></pre>
+  </section>
+
+  <section>
+    <h2>Drop versus reject</h2>
+    <p class="sub">Deleting the HTTP rule produced a hang, not an error. That
+    distinction is the most useful diagnostic in networking.</p>
+
+    <pre class="box"><span class="r">DROP</span>     <span class="dim">the packet is binned, nothing sent back</span>
+         <span class="dim">→ the sender waits for a reply that never comes → </span><span class="w">TIMEOUT</span>
+
+<span class="g">REJECT</span>   <span class="dim">a refusal is sent back</span>
+         <span class="dim">→ the sender knows at once → </span><span class="g">INSTANT error</span></pre>
+
+    <p><strong>Security groups and NACL denies always drop, never
+    reject.</strong></p>
+
+    <div class="done">
+      <div class="drow x"><span>→</span><span><strong>hangs, then times out</strong> — nothing replied. firewall, wrong IP, or no route.</span></div>
+      <div class="drow"><span>→</span><span><strong>"Connection refused", instantly</strong> — something replied. the network is fine, the app is down.</span></div>
+      <div class="drow"><span>→</span><span><strong>"Could not resolve host"</strong> — DNS. never got as far as connecting.</span></div>
+    </div>
+
+    <div class="callout">
+      <p class="big">These send you in opposite directions.</p>
+      <p>People spend hours checking firewalls when the error already told
+      them the application had crashed. Dropping rather than rejecting is
+      deliberate — a rejection confirms a machine exists, and silence gives
+      an attacker nothing.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>The debugging session</h2>
+    <p class="sub">web-2 timed out in the browser while web-1 had worked.
+    Seven steps, no guessing.</p>
+
+    <div class="ladder">
+      <div class="lstep pass">
+        <span class="n">1</span>
+        <span class="what">The failure was a <strong>timeout</strong>, not "connection refused"
+          <em>so the packet never reached nginx — not an application problem</em></span>
+        <span class="res">narrowed</span>
+      </div>
+      <div class="lstep found">
+        <span class="n">2</span>
+        <span class="what">Checked the security group — port 80 from <code>0.0.0.0/0</code> present
+          <em>the first hypothesis was wrong</em></span>
+        <span class="res">ruled out</span>
+      </div>
+      <div class="lstep pass">
+        <span class="n">3</span>
+        <span class="what">SSH to web-2 <strong>worked</strong>
+          <em>route table, internet gateway, public IP and instance all proven fine — only port 80 affected</em></span>
+        <span class="res">big cut</span>
+      </div>
+      <div class="lstep pass">
+        <span class="n">4</span>
+        <span class="what">From inside web-2: <code>systemctl status nginx</code>, <code>ss -tlnp</code>, <code>curl localhost</code>
+          <em>active, listening on 0.0.0.0:80, returns 200 — the server is perfect</em></span>
+        <span class="res">server OK</span>
+      </div>
+      <div class="lstep pass">
+        <span class="n">5</span>
+        <span class="what">From inside web-2, <code>curl</code> both public IPs
+          <em>both 200 OK — the whole AWS side is proven working</em></span>
+        <span class="res">AWS OK</span>
+      </div>
+      <div class="lstep pass">
+        <span class="n">6</span>
+        <span class="what"><code>curl</code> from the Windows machine, both IPs
+          <em>both 200 OK — the network path from home is proven working</em></span>
+        <span class="res">path OK</span>
+      </div>
+      <div class="lstep found">
+        <span class="n">7</span>
+        <span class="what">Therefore: <strong>the browser</strong>
+          <em>Chrome's "Always use secure connections" was rewriting http:// to https://. Port 443 was closed, so it hung.</em></span>
+        <span class="res">FOUND</span>
+      </div>
+    </div>
+
+    <div class="callout">
+      <p class="big">Four tests, each eliminating a whole category.</p>
+      <p>No guessing at any point. That is the difference between fixing
+      problems and restarting things until they work.</p>
+    </div>
+
+    <p><strong>And the lesson underneath: your test tool can be the
+    bug.</strong> Browsers perform HTTPS upgrades, caching, prefetching and
+    extension interference. <code>curl</code> does exactly what you typed and
+    nothing more. <strong>Diagnose with <code>curl</code> first</strong> — if
+    curl works and the browser does not, stop looking at the server.</p>
+  </section>
+
+  <section>
+    <h2>How you pay for EC2</h2>
+    <div class="done">
+      <div class="drow"><span>→</span><span><strong>On-Demand</strong> — per second, no commitment. most expensive.</span></div>
+      <div class="drow"><span>→</span><span><strong>Reserved Instance</strong> — commit 1 or 3 years. ~40-60% off.</span></div>
+      <div class="drow"><span>→</span><span><strong>Savings Plans</strong> — commit to $/hour. ~40-70% off, and flexible across instance types, Lambda and Fargate.</span></div>
+      <div class="drow"><span>→</span><span><strong>Spot</strong> — spare capacity, reclaimed on 2 minutes' notice. up to 90% off.</span></div>
+      <div class="drow"><span>→</span><span><strong>Dedicated Host</strong> — a whole physical server. for per-socket licensing.</span></div>
+    </div>
+    <pre class="box"><span class="g">✅ Spot</span>  batch jobs, rendering, CI, big data — anything interruptible
+<span class="r">❌ Spot</span>  your database. your only web server.</pre>
+    <p><strong>Exam phrasing:</strong> "fault-tolerant", "can be
+    interrupted", "flexible start and end times" → Spot. "Steady state,
+    always on" → Reserved or Savings Plans. "Bring your own licence" or
+    "per-socket licensing" → Dedicated Host.</p>
+  </section>
+
+  <section>
+    <h2>Words you now own</h2>
+    <dl class="vocab">
+      <div class="vrow"><dt>EC2</dt><dd>Renting a computer. Elastic Compute Cloud.</dd></div>
+      <div class="vrow"><dt>AMI</dt><dd>A saved copy of a finished disk. Instructions plus a snapshot.</dd></div>
+      <div class="vrow"><dt>instance type</dt><dd><code>t3.micro</code> — family, generation, size.</dd></div>
+      <div class="vrow"><dt>user data</dt><dd>A script that runs once at first boot, as root.</dd></div>
+      <div class="vrow"><dt>key pair</dt><dd>How you SSH in. AWS gives you the private half once.</dd></div>
+      <div class="vrow"><dt>EBS</dt><dd>A disk on the network. Lives in one AZ. Outlives the instance.</dd></div>
+      <div class="vrow"><dt>instance store</dt><dd>A disk physically inside the host. Wiped on stop.</dd></div>
+      <div class="vrow"><dt>snapshot</dt><dd>A backup of a volume. Regional, incremental.</dd></div>
+      <div class="vrow"><dt>gp3 / io2 / st1 / sc1</dt><dd>Volume types: default, high IOPS, throughput, cold.</dd></div>
+      <div class="vrow"><dt>Spot</dt><dd>Spare capacity, up to 90% off, reclaimed on 2 minutes' notice.</dd></div>
+      <div class="vrow"><dt>Savings Plan</dt><dd>Commit to spend per hour. Flexible across services.</dd></div>
+      <div class="vrow"><dt>drop vs reject</dt><dd>Timeout versus "connection refused". Opposite diagnoses.</dd></div>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Test yourself</h2>
+    <ol class="qs">
+      <li>Name the three independent things required before the internet can reach a server. What happens if only two are present?</li>
+      <li>Why is auto-assign public IP off by default in a subnet you built, but on in the default VPC?</li>
+      <li>Your server says its IP is <code>10.0.1.238</code>, but you reach it at <code>13.233.89.217</code>. Explain.</li>
+      <li>You launch from an AMI with no user data. nginx is running. Why?</li>
+      <li>The page shows a different hostname from the machine serving it. Explain exactly why.</li>
+      <li>When would you use user data rather than bake something into an AMI? Give the Auto Scaling reason.</li>
+      <li>Why can an EBS volume not be attached to an instance in another AZ — and how do you move it anyway?</li>
+      <li>You stop an instance. What happens to EBS data? To instance store data?</li>
+      <li>Why did gp3 replace gp2? What problem did gp2 create?</li>
+      <li>A connection hangs then times out. A different one says "connection refused" instantly. What does each tell you, and why do they need opposite fixes?</li>
+      <li>Why do firewalls drop packets rather than rejecting them?</li>
+      <li>You deregister an AMI. What is left behind, and why does the console not clean it up by default?</li>
+      <li>You terminate an instance with two volumes attached. What happens to each?</li>
+      <li>Nightly video processing that can restart if interrupted — which purchasing option? Why not for a database?</li>
+      <li>Your browser times out but <code>curl</code> works from the same machine. What have you proven, and where do you look next?</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>Carried forward</h2>
+    <dl class="vocab">
+      <div class="vrow"><dt>AMIs, launch templates</dt><dd>Day 9 — Auto Scaling launches from these.</dd></div>
+      <div class="vrow"><dt>SG referencing another SG</dt><dd>Day 8 — load balancer to instances.</dd></div>
+      <div class="vrow"><dt>EBS types and IOPS</dt><dd>Day 12 — storage in depth.</dd></div>
+      <div class="vrow"><dt>cross-region snapshots</dt><dd>Day 23 — disaster recovery.</dd></div>
+      <div class="vrow"><dt>Spot and Savings Plans</dt><dd>Day 22 — cost architecture.</dd></div>
+      <div class="vrow"><dt>"Not secure" in the browser</dt><dd>Day 18 — ACM certificates.</dd></div>
+    </dl>
+  </section>
+
+</main>
+
+<footer class="wrap foot">
+  <span>Day 5 of 30 · notes in <code>docs/week-1-foundations/</code></span>
+  <span class="muted"><a href="plan.html" style="color:inherit">The plan</a></span>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var THEME = "netcurriculum.theme";
+  try {
+    var saved = localStorage.getItem(THEME);
+    if (saved) document.documentElement.dataset.theme = saved;
+  } catch (e) { /* storage may be blocked; the page still works */ }
+  document.getElementById("theme").addEventListener("click", function () {
+    var next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+    document.documentElement.dataset.theme = next;
+    try { localStorage.setItem(THEME, next); } catch (e) { /* ignore */ }
+  });
+
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+
+  /* ---------- three switches ----------
+     All three are required and each fails differently, which is the point:
+     two out of three still gives you nothing, with no error anywhere. */
+  var state = { route: true, ip: false, sg: false };
+  var swrow = document.getElementById("swrow");
+  var verdict3 = document.getElementById("verdict3");
+
+  var SWITCHES = [
+    { key: "route", label: "Route to the internet gateway", hint: "public-rt has 0.0.0.0/0 → igw" },
+    { key: "ip",    label: "Public IP address",             hint: "auto-assign, off by default here" },
+    { key: "sg",    label: "Security group allows port 80", hint: "inbound rule from 0.0.0.0/0" }
+  ];
+
+  var btns = {};
+  SWITCHES.forEach(function (s) {
+    var b = el("button", "tgl");
+    b.type = "button";
+    b.appendChild(document.createTextNode(s.label));
+    b.appendChild(el("small", null, s.hint));
+    b.addEventListener("click", function () { state[s.key] = !state[s.key]; draw(); });
+    swrow.appendChild(b);
+    btns[s.key] = b;
+  });
+
+  function draw() {
+    SWITCHES.forEach(function (s) {
+      btns[s.key].setAttribute("aria-pressed", state[s.key] ? "true" : "false");
+    });
+
+    var head, body, cls;
+    if (state.route && state.ip && state.sg) {
+      cls = "ok";
+      head = "200 OK";
+      body = "All three. The page loads. Note that none of them is sufficient on its own — this is the only combination that works.";
+    } else if (!state.ip && state.route && state.sg) {
+      cls = "no";
+      head = "unreachable — no address to aim at";
+      body = "The route is correct and the security group is perfect. The machine simply has no address the internet can write on an envelope. Nothing errors anywhere; it is just invisible. This is the one people miss, because AWS turns it on automatically in the default VPC.";
+    } else if (!state.route && state.ip && state.sg) {
+      cls = "no";
+      head = "unreachable — no road";
+      body = "A public address on a subnet with no path out. A street address on a house with no road to it: the postman knows where you live and still cannot get there.";
+    } else if (!state.sg && state.route && state.ip) {
+      cls = "no";
+      head = "TIMEOUT";
+      body = "The packet arrives and the security group drops it silently — no refusal is sent back, so your browser waits for a reply that never comes. A hang, not an error. That distinction is how you tell a firewall problem from a crashed application.";
+    } else {
+      cls = "no";
+      head = "unreachable";
+      body = "More than one piece missing. All three are required, and each one failing looks slightly different — which is exactly what makes a methodical check faster than guessing.";
+    }
+
+    verdict3.className = "verdict3 " + cls;
+    verdict3.innerHTML = "";
+    verdict3.appendChild(el("b", null, head));
+    verdict3.appendChild(el("span", null, body));
+  }
+  draw();
+})();
+</script>
+</body>
+</html>
